@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="pt-br" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ImóveisGestão | QR Code</title>
+    <style>
+        :root {
+            --bg: #f8fafc; --surface: #ffffff; --text: #0f172a;
+            --primary: #2563eb; --border: #e2e8f0; --danger: #ef4444;
+        }
+        [data-theme="dark"] {
+            --bg: #0f172a; --surface: #1e293b; --text: #f1f5f9; --border: #334155;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { width: 100%; height: 100%; background: var(--bg); color: var(--text); overflow: hidden; transition: 0.3s; }
+        body { font-family: sans-serif; display: flex; flex-direction: row; }
+        body.menu-right { flex-direction: row-reverse; }
+
+        aside { 
+            width: 240px; background: var(--surface); border-right: 1px solid var(--border); 
+            display: flex; flex-direction: column; padding: 15px; z-index: 100; height: 100vh;
+        }
+        body.menu-right aside { border-right: none; border-left: 1px solid var(--border); }
+        body.collapsed aside { width: 60px; padding: 10px; }
+        body.collapsed .txt { display: none; }
+
+        main { flex: 1; height: 100vh; overflow-y: auto; padding: 15px; }
+        .header { display: flex; gap: 8px; margin-bottom: 15px; background: var(--surface); padding: 10px; border-radius: 8px; border: 1px solid var(--border); }
+        input, select, textarea { padding: 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); outline: none; font-family: inherit; }
+        textarea { resize: vertical; min-height: 60px; }
+        
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 5px; }
+        .card img { width: 100%; height: 130px; object-fit: cover; border-radius: 8px; background: #eee; }
+
+        button { cursor: pointer; border: none; border-radius: 6px; padding: 10px; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 5px; transition: 0.2s; }
+        .btn-p { background: var(--primary); color: white; width: 100%; }
+        .btn-s { background: transparent; border: 1px solid var(--border); color: var(--text); width: 100%; margin-top: 5px; }
+
+        #chat-win { 
+            position: fixed; bottom: 20px; right: 20px; width: 280px; height: 350px; 
+            background: var(--surface); border: 1px solid var(--border); border-radius: 12px; 
+            display: none; flex-direction: column; z-index: 2000; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        body.menu-right #chat-win { right: auto; left: 20px; }
+        #msgs { flex: 1; padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; font-size: 0.85rem; }
+
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: none; align-items: center; justify-content: center; z-index: 3000; padding: 10px; }
+        .modal-c { background: var(--surface); padding: 20px; border-radius: 12px; width: 100%; max-width: 500px; display: flex; flex-direction: column; gap: 12px; max-height: 90vh; overflow-y: auto; }
+        .modal-c .row { display: flex; gap: 8px; flex-wrap: wrap; }
+        .modal-c .row > * { flex: 1 1 120px; }
+        .qrcode-canvas { display: flex; justify-content: center; margin: 10px 0; }
+        .qrcode-canvas canvas { max-width: 100%; height: auto; border: 1px solid var(--border); border-radius: 8px; }
+
+        /* MODO VISUALIZAÇÃO: Esconde ferramentas de dono */
+        body.view-mode .admin, 
+        body.view-mode .card-admin-btns,
+        body.view-mode .config-btns { display: none !important; }
+
+        @media (max-width: 600px) {
+            aside { position: fixed; bottom: 0; width: 100% !important; height: 60px; flex-direction: row; border: none; border-top: 1px solid var(--border); padding: 5px; justify-content: space-around; }
+            main { padding-bottom: 70px; }
+            .txt, .nav-head { display: none !important; }
+        }
+    </style>
+    <!-- Biblioteca para gerar QR Code -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+</head>
+<body>
+
+    <aside id="menu">
+        <div class="nav-head" style="margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
+            <span class="txt" style="font-weight: 900;">ImóveisGestão</span>
+            <button class="btn-s" style="width: 35px; padding: 5px;" onclick="document.body.classList.toggle('collapsed')">☰</button>
+        </div>
+        
+        <button class="btn-s" id="btn-enter" onclick="openM('m-join')">🌐 <span class="txt">Entrar na Sala</span></button>
+        
+        <div class="admin" id="admin-tools" style="display:flex; flex-direction:column; gap:5px; margin-top:10px;">
+            <button class="btn-p" onclick="openEdit()">➕ <span class="txt">Novo Imóvel</span></button>
+            <button class="btn-s" onclick="openM('m-host')">📡 <span class="txt">Live Host</span></button>
+            <button class="btn-s" onclick="document.getElementById('f-in').click()">📥 <span class="txt">Importar</span></button>
+            <button class="btn-s" onclick="exportData()">📤 <span class="txt">Exportar</span></button>
+            <input type="file" id="f-in" style="display:none" onchange="importData(event)">
+        </div>
+
+        <div style="margin-top: auto; display: flex; flex-direction: column; gap: 5px;">
+            <div class="config-btns" style="display: flex; flex-direction: column; gap: 5px;">
+                <button class="btn-s" style="font-size: 0.7rem; padding:5px" onclick="toggleTheme()">🌓 <span class="txt">Tema</span></button>
+                <button class="btn-s" style="font-size: 0.7rem; padding:5px" onclick="toggleSide()">↔️ <span class="txt">Lado</span></button>
+            </div>
+            <button class="btn-s" onclick="toggleChat()">💬 <span class="txt">Chat</span> <span id="notif" style="display:none; color:red">●</span></button>
+        </div>
+    </aside>
+
+    <main>
+        <div class="header">
+            <input type="text" id="srch" placeholder="Buscar imóvel..." style="flex:2" oninput="render()">
+            <select id="filt" style="flex:1" onchange="render()"><option>Todos</option></select>
+        </div>
+        <div id="status" style="font-size: 0.6rem; color: var(--primary); margin-bottom: 10px; font-weight: bold; text-transform: uppercase;">Modo Local</div>
+        <div class="grid" id="list"></div>
+    </main>
+
+    <div id="chat-win">
+        <div style="padding: 10px; border-bottom: 1px solid var(--border); font-weight: bold; display: flex; justify-content: space-between;">
+            <span>Chat Imóveis</span> <span onclick="toggleChat()" style="cursor:pointer">×</span>
+        </div>
+        <div id="msgs"></div>
+        <div style="padding: 10px; display: flex; gap: 5px;"><input type="text" id="chat-i" style="flex:1" onkeypress="if(event.key==='Enter') sendChat()"><button onclick="sendChat()" style="background:var(--primary); color:white; padding: 5px 10px; border-radius: 6px;">></button></div>
+    </div>
+
+    <!-- Modal de edição/cadastro de imóvel (agora com campo QR Code) -->
+    <div id="m-edit" class="modal"><div class="modal-c">
+        <h3>📋 Dados do Imóvel</h3>
+        <input type="hidden" id="e-id">
+        <input type="text" id="e-titulo" placeholder="Título (ex: Casa em Moema)" required>
+        <select id="e-tipo">
+            <option value="Casa">Casa</option>
+            <option value="Apartamento">Apartamento</option>
+            <option value="Terreno">Terreno</option>
+            <option value="Comercial">Comercial</option>
+            <option value="Outro">Outro</option>
+        </select>
+        <div class="row">
+            <input type="number" id="e-quartos" placeholder="Quartos" min="0">
+            <input type="number" id="e-banheiros" placeholder="Banheiros" min="0">
+            <input type="number" id="e-area" placeholder="Área (m²)" step="0.1" min="0">
+        </div>
+        <input type="text" id="e-endereco" placeholder="Endereço completo">
+        <div class="row">
+            <input type="number" id="e-preco" placeholder="Preço (R$)" step="0.01" min="0">
+            <input type="text" id="e-contato" placeholder="Contato (whatsapp/email)">
+        </div>
+        <!-- Novo campo QR Code -->
+        <input type="text" id="e-qrcode" placeholder="QR Code (texto para link ou informação)">
+        <input type="file" id="e-img" accept="image/*">
+        <button class="btn-p" onclick="save()">💾 Salvar Imóvel</button>
+        <button class="btn-s" onclick="closeM()">Cancelar</button>
+    </div></div>
+
+    <!-- Modal de detalhes / contato (agora com QR Code) -->
+    <div id="m-detalhes" class="modal"><div class="modal-c">
+        <h3 id="d-titulo"></h3>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div><strong>Tipo:</strong> <span id="d-tipo"></span></div>
+            <div><strong>Endereço:</strong> <span id="d-endereco"></span></div>
+            <div class="row">
+                <span><strong>Quartos:</strong> <span id="d-quartos"></span></span>
+                <span><strong>Banheiros:</strong> <span id="d-banheiros"></span></span>
+                <span><strong>Área:</strong> <span id="d-area"></span> m²</span>
+            </div>
+            <div style="font-size: 1.4rem; color: var(--primary); font-weight: bold;" id="d-preco"></div>
+            <div style="background: var(--bg); padding: 10px; border: 2px dashed var(--primary); border-radius: 8px; word-break: break-all;">
+                <strong>Contato:</strong> <span id="d-contato" style="cursor: pointer;" onclick="copyContato()">📋 copiar</span>
+                <div id="d-contato-text"></div>
+            </div>
+            <!-- Área para exibição do QR Code -->
+            <div id="d-qrcode-container" class="qrcode-canvas"></div>
+        </div>
+        <button class="btn-s" onclick="closeM()">Fechar</button>
+    </div></div>
+
+    <!-- Modais de conexão (inalterados) -->
+    <div id="m-join" class="modal"><div class="modal-c">
+        <h3>Entrar na Sala</h3><input type="text" id="in-id" placeholder="ID do Lojista"><button class="btn-p" onclick="conn('client')">Conectar</button><button class="btn-s" onclick="closeM()">Cancelar</button>
+    </div></div>
+
+    <div id="m-host" class="modal"><div class="modal-c">
+        <h3>Criar Sala</h3><input type="text" id="ho-id" placeholder="Nome da Loja"><button class="btn-p" onclick="conn('host')">Iniciar</button><button class="btn-s" onclick="closeM()">Cancelar</button>
+    </div></div>
+
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script>
+        // Banco de dados de imóveis
+        let db = JSON.parse(localStorage.getItem('imoveis_db')) || [];
+        let peer, active, isHost = false;
+
+        // ---------- Funções de UI ----------
+        function openM(id) { document.getElementById(id).style.display = 'flex'; }
+        function closeM() { document.querySelectorAll('.modal').forEach(m => m.style.display='none'); }
+        function toggleTheme() { const h = document.documentElement; h.setAttribute('data-theme', h.getAttribute('data-theme') === 'light' ? 'dark' : 'light'); }
+        function toggleSide() { document.body.classList.toggle('menu-right'); }
+
+        // ---------- PeerJS ----------
+        function conn(mode) {
+            const id = mode === 'host' ? document.getElementById('ho-id').value : document.getElementById('in-id').value;
+            if(!id) return; closeM();
+            peer = new Peer(mode === 'host' ? id : null);
+            peer.on('open', () => {
+                if(mode === 'client') { 
+                    active = peer.connect(id); 
+                    sub(active); 
+                    document.body.classList.add('view-mode');
+                }
+                document.getElementById('status').innerText = "CONECTADO: " + id;
+            });
+            peer.on('connection', (c) => { isHost = true; active = c; sub(c); setTimeout(() => push(), 1000); });
+        }
+
+        function sub(c) {
+            c.on('data', (d) => {
+                if(d.type === 'db') { 
+                    db = d.data; 
+                    document.body.classList.add('view-mode');
+                    render(); atualizarFiltro(); 
+                }
+                if(d.type === 'chat') { addMsg(d.data, 'them'); document.getElementById('notif').style.display='inline'; }
+                if(d.type === 'req') push();
+            });
+        }
+
+        function push() { if(active && isHost) active.send({type:'db', data:db}); }
+
+        // ---------- Renderização dos cards ----------
+        function render() {
+            const list = document.getElementById('list');
+            const q = document.getElementById('srch').value.toLowerCase();
+            const f = document.getElementById('filt').value;
+            const res = db.filter(i => 
+                (i.titulo.toLowerCase().includes(q) || i.endereco.toLowerCase().includes(q)) && 
+                (f === 'Todos' || i.tipo === f)
+            );
+
+            list.innerHTML = res.map(i => `
+                <div class="card">
+                    ${i.img ? `<img src="${i.img}">` : `<div style="height:130px;background:#eee;border-radius:8px; display:flex; align-items:center; justify-content:center; color:#999;">sem foto</div>`}
+                    <small style="font-weight:bold; color:var(--primary)">${i.tipo}</small>
+                    <strong style="font-size:0.9rem">${i.titulo}</strong>
+                    <span style="font-size:0.8rem; color:var(--text)}">${i.endereco.substring(0,30)}${i.endereco.length>30?'…':''}</span>
+                    <div style="display:flex; gap:4px; font-size:0.75rem;">
+                        <span>🛏️ ${i.quartos}</span>
+                        <span>🚽 ${i.banheiros}</span>
+                        <span>📐 ${i.area}m²</span>
+                    </div>
+                    <span style="color:var(--primary); font-weight:bold">R$ ${Number(i.preco).toFixed(2)}</span>
+                    <button class="btn-p" style="padding:6px; font-size:0.8rem" onclick="openDetalhes('${i.id}')">🔍 Detalhes</button>
+                    <div class="card-admin-btns" style="display:flex; gap:4px; margin-top:5px">
+                        <button class="btn-s" style="padding:4px" onclick="openEdit('${i.id}')">✏️</button>
+                        <button class="btn-s" style="padding:4px; color:var(--danger)" onclick="del('${i.id}')">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ---------- CRUD de imóveis (com campo qrcode) ----------
+        function openEdit(id = null) {
+            if(id) {
+                const i = db.find(x => x.id == id);
+                document.getElementById('e-id').value = i.id;
+                document.getElementById('e-titulo').value = i.titulo;
+                document.getElementById('e-tipo').value = i.tipo;
+                document.getElementById('e-quartos').value = i.quartos;
+                document.getElementById('e-banheiros').value = i.banheiros;
+                document.getElementById('e-area').value = i.area;
+                document.getElementById('e-endereco').value = i.endereco;
+                document.getElementById('e-preco').value = i.preco;
+                document.getElementById('e-contato').value = i.contato;
+                document.getElementById('e-qrcode').value = i.qrcode || ''; // Carrega QR Code se existir
+            } else {
+                document.getElementById('e-id').value = '';
+                document.querySelectorAll('#m-edit input:not([type="file"])').forEach(i => i.value = '');
+                document.getElementById('e-tipo').value = 'Casa';
+            }
+            openM('m-edit');
+        }
+
+        function save() {
+            const id = document.getElementById('e-id').value;
+            const file = document.getElementById('e-img').files[0];
+            const act = (img = null) => {
+                const imovel = {
+                    id: id || Date.now().toString(),
+                    titulo: document.getElementById('e-titulo').value,
+                    tipo: document.getElementById('e-tipo').value,
+                    quartos: document.getElementById('e-quartos').value || 0,
+                    banheiros: document.getElementById('e-banheiros').value || 0,
+                    area: document.getElementById('e-area').value || 0,
+                    endereco: document.getElementById('e-endereco').value,
+                    preco: document.getElementById('e-preco').value || 0,
+                    contato: document.getElementById('e-contato').value,
+                    qrcode: document.getElementById('e-qrcode').value, // Salva o texto do QR Code
+                    img: img || (id ? db.find(x => x.id == id).img : null)
+                };
+                if(id) {
+                    db = db.map(x => x.id == id ? imovel : x);
+                } else {
+                    db.push(imovel);
+                }
+                localStorage.setItem('imoveis_db', JSON.stringify(db));
+                closeM();
+                render();
+                atualizarFiltro();
+                push();
+            };
+            if(file) {
+                const r = new FileReader();
+                r.onload = e => act(e.target.result);
+                r.readAsDataURL(file);
+            } else {
+                act();
+            }
+        }
+
+        function del(id) {
+            if(confirm("Remover este imóvel?")) {
+                db = db.filter(x => x.id != id);
+                localStorage.setItem('imoveis_db', JSON.stringify(db));
+                render();
+                atualizarFiltro();
+                push();
+            }
+        }
+
+        // ---------- Modal de detalhes (agora com QR Code) ----------
+        function openDetalhes(id) {
+            const i = db.find(x => x.id == id);
+            document.getElementById('d-titulo').innerText = i.titulo;
+            document.getElementById('d-tipo').innerText = i.tipo;
+            document.getElementById('d-endereco').innerText = i.endereco;
+            document.getElementById('d-quartos').innerText = i.quartos;
+            document.getElementById('d-banheiros').innerText = i.banheiros;
+            document.getElementById('d-area').innerText = i.area;
+            document.getElementById('d-preco').innerText = 'R$ ' + Number(i.preco).toFixed(2);
+            document.getElementById('d-contato-text').innerText = i.contato;
+
+            // Gera o QR Code se houver texto
+            const container = document.getElementById('d-qrcode-container');
+            container.innerHTML = ''; // Limpa anterior
+            if (i.qrcode && i.qrcode.trim() !== '') {
+                gerarQRCode(i.qrcode, container);
+            } else {
+                container.innerHTML = '<p style="color: #999;">Nenhum QR Code cadastrado.</p>';
+            }
+
+            openM('m-detalhes');
+        }
+
+        // Função para gerar QR Code usando a biblioteca qrcode-generator
+        function gerarQRCode(texto, elementoContainer) {
+            try {
+                const qr = qrcode(0, 'M'); // Tipo 0 (automático) e nível de correção M
+                qr.addData(texto);
+                qr.make();
+
+                // Tamanho do módulo (cada quadradinho) em pixels
+                const moduleSize = 4;
+                const size = qr.getModuleCount() * moduleSize;
+
+                // Criar canvas
+                const canvas = document.createElement('canvas');
+                canvas.width = size;
+                canvas.height = size;
+                const ctx = canvas.getContext('2d');
+
+                // Desenhar QR Code
+                for (let row = 0; row < qr.getModuleCount(); row++) {
+                    for (let col = 0; col < qr.getModuleCount(); col++) {
+                        ctx.fillStyle = qr.isDark(row, col) ? '#000000' : '#ffffff';
+                        ctx.fillRect(col * moduleSize, row * moduleSize, moduleSize, moduleSize);
+                    }
+                }
+
+                elementoContainer.appendChild(canvas);
+            } catch (err) {
+                elementoContainer.innerHTML = '<p style="color: red;">Erro ao gerar QR Code.</p>';
+                console.error(err);
+            }
+        }
+
+        function copyContato() {
+            const texto = document.getElementById('d-contato-text').innerText;
+            navigator.clipboard.writeText(texto);
+            alert("Contato copiado!");
+        }
+
+        // ---------- Filtro por tipo ----------
+        function atualizarFiltro() {
+            const tipos = ['Todos', ...new Set(db.map(i => i.tipo))];
+            document.getElementById('filt').innerHTML = tipos.map(t => `<option value="${t}">${t}</option>`).join('');
+        }
+
+        // ---------- Chat ----------
+        function toggleChat() { const w = document.getElementById('chat-win'); w.style.display = w.style.display === 'flex' ? 'none' : 'flex'; document.getElementById('notif').style.display='none'; }
+        function sendChat() { const i = document.getElementById('chat-i'); if(!i.value || !active) return; active.send({type: 'chat', data: i.value}); addMsg(i.value, 'me'); i.value = ''; }
+        function addMsg(t, s) { const d = document.createElement('div'); d.innerText = t; d.style.padding = '8px'; d.style.borderRadius = '8px'; d.style.maxWidth = '80%'; d.style.alignSelf = s === 'me' ? 'flex-end' : 'flex-start'; d.style.background = s === 'me' ? 'var(--primary)' : 'var(--border)'; d.style.color = s === 'me' ? 'white' : 'var(--text)'; document.getElementById('msgs').appendChild(d); const m = document.getElementById('msgs'); m.scrollTop = m.scrollHeight; }
+
+        // ---------- Exportação/Importação ----------
+        function exportData() { const a=document.createElement('a'); a.href="data:text/json;charset=utf-8,"+encodeURIComponent(JSON.stringify(db)); a.download="imoveis.json"; a.click(); }
+        function importData(e) { const r=new FileReader(); r.onload=ev => { db=JSON.parse(ev.target.result); localStorage.setItem('imoveis_db', JSON.stringify(db)); render(); atualizarFiltro(); push(); }; r.readAsText(e.target.files[0]); }
+
+        // Inicialização
+        window.onload = () => { 
+            atualizarFiltro(); 
+            render(); 
+        };
+    </script>
+</body>
+</html>
