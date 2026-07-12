@@ -554,8 +554,8 @@
     <div id="m-supabase" class="modal"><div class="modal-c">
             <h3>☁️ Configurar Supabase</h3>
             <p style="font-size:0.8rem;color:#666;">Use para sincronizar dados na rede Tor e entre dispositivos.</p>
-            <input type="text" id="sb-url" placeholder="URL do Supabase (ex: https://xxx.supabase.co)" values="https://fodekmainscpeyfvwbrb.supabase.co">
-            <input type="text" id="sb-key" placeholder="Chave anon/public (ex: eyJ...)" values="sb_publishable_TNpTLiYWHjOajcjTUCll5w_sUWxlPAD">
+            <input type="text" id="sb-url" placeholder="URL do Supabase (ex: https://xxx.supabase.co)" value="https://fodekmainscpeyfvwbrb.supabase.co">
+            <input type="text" id="sb-key" placeholder="Chave anon/public (ex: eyJ...)" value="sb_publishable_TNpTLiYWHjOajcjTUCll5w_sUWxlPAD">
             <input type="text" id="sb-table" placeholder="Nome da tabela (ex: imoveis)" value="imoveis">
             <button class="btn-p" onclick="salvarConfigSupabase()">💾 Salvar e Conectar</button>
             <button class="btn-s" onclick="testarSupabase()">🔌 Testar Conexão</button>
@@ -589,8 +589,8 @@
 
         function configurarSupabase() {
             if (supabaseConfig) {
-                document.getElementById('sb-url').value = supabaseConfig.url || 'https://fodekmainscpeyfvwbrb.supabase.co';
-                document.getElementById('sb-key').value = supabaseConfig.key || 'sb_publishable_TNpTLiYWHjOajcjTUCll5w_sUWxlPAD';
+                document.getElementById('sb-url').value = supabaseConfig.url || '';
+                document.getElementById('sb-key').value = supabaseConfig.key || '';
                 document.getElementById('sb-table').value = supabaseConfig.table || 'imoveis';
             }
             openM('m-supabase');
