@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ImóveisGestão | Admin + Cliente</title>
+    <title>ImóveisGestão | Socket.IO + Salas</title>
     <style>
         :root {
             --bg: #f8fafc;
@@ -110,8 +110,8 @@
             position: fixed;
             bottom: 20px;
             right: 20px;
-            width: 280px;
-            height: 350px;
+            width: 300px;
+            height: 400px;
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: 12px;
@@ -150,7 +150,7 @@
         .qrcode-canvas { display: flex; justify-content: center; margin: 10px 0; }
         .qrcode-canvas canvas { max-width: 100%; height: auto; border: 1px solid var(--border); border-radius: 8px; }
 
-        /* Modo Cliente: esconde ferramentas de admin */
+        /* Modo Cliente */
         body.cliente-mode .admin,
         body.cliente-mode .card-admin-btns,
         body.cliente-mode .config-btns,
@@ -244,25 +244,15 @@
             font-weight: bold;
             font-size: 0.8rem;
         }
-        .status-supabase {
+        .status-socket {
             font-size: 0.7rem;
             padding: 4px 10px;
             border-radius: 20px;
             display: inline-block;
         }
-        .status-supabase.online { background: var(--success); color: white; }
-        .status-supabase.offline { background: var(--danger); color: white; }
-        .status-supabase.sincronizando { background: var(--warning); color: white; }
-        .peer-status {
-            font-size: 0.7rem;
-            padding: 4px 10px;
-            border-radius: 20px;
-            display: inline-block;
-            background: var(--border);
-            color: var(--text);
-        }
-        .peer-status.conectado { background: var(--success); color: white; }
-        .peer-status.host { background: var(--primary); color: white; }
+        .status-socket.online { background: var(--success); color: white; }
+        .status-socket.offline { background: var(--danger); color: white; }
+        .status-socket.conectando { background: var(--warning); color: white; }
         .role-badge {
             font-size: 0.7rem;
             padding: 4px 14px;
@@ -274,9 +264,17 @@
         .role-badge.cliente { background: var(--warning); color: white; }
         .btn-cliente-visible { display: none !important; }
         body.cliente-mode .btn-cliente-visible { display: flex !important; }
+        .sala-info {
+            font-size: 0.7rem;
+            padding: 4px 12px;
+            border-radius: 20px;
+            background: var(--border);
+            color: var(--text);
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
 <body>
 
@@ -290,10 +288,10 @@
         <button class="btn-s btn-cliente-visible" onclick="openM('m-contrato')">📄 <span class="txt">Ver Contrato</span></button>
         <button class="btn-s" id="btn-enter" onclick="openM('m-join')">🌐 <span class="txt">Entrar na Sala</span></button>
 
-        <!-- Ferramentas de Admin (host) -->
+        <!-- Ferramentas de Admin -->
         <div class="admin" id="admin-tools" style="display:flex; flex-direction:column; gap:5px; margin-top:10px;">
             <button class="btn-p" onclick="openEdit()">➕ <span class="txt">Novo Imóvel</span></button>
-            <button class="btn-s" onclick="openM('m-host')">📡 <span class="txt">Live Host</span></button>
+            <button class="btn-s" onclick="criarSala()">📡 <span class="txt">Criar Sala</span></button>
             <button class="btn-s" onclick="document.getElementById('f-in').click()">📥 <span class="txt">Importar</span></button>
             <button class="btn-s" onclick="exportData()">📤 <span class="txt">Exportar</span></button>
             <input type="file" id="f-in" style="display:none" onchange="importData(event)">
@@ -316,9 +314,9 @@
             <input type="text" id="srch" placeholder="Buscar imóvel..." style="flex:2" oninput="render()">
             <select id="filt" style="flex:1" onchange="render()"><option>Todos</option></select>
             <button class="btn-s btn-sm btn-cliente-visible" onclick="openM('m-contrato')" style="width:auto;">📄 Contrato</button>
-            <span id="supabaseStatus" class="status-supabase offline">☁️ Offline</span>
-            <span id="peerStatus" class="peer-status">📡 Local</span>
+            <span id="socketStatus" class="status-socket offline">🔌 Offline</span>
             <span id="roleBadge" class="role-badge admin">👑 Admin</span>
+            <span id="salaBadge" class="sala-info">🏠 Sala: local</span>
         </div>
         <div id="status" style="font-size: 0.6rem; color: var(--primary); margin-bottom: 10px; font-weight: bold; text-transform: uppercase;">Modo Local</div>
         <div class="grid" id="list"></div>
@@ -326,7 +324,7 @@
 
     <div id="chat-win">
         <div style="padding: 10px; border-bottom: 1px solid var(--border); font-weight: bold; display: flex; justify-content: space-between;">
-            <span>💬 Chat</span> <span onclick="toggleChat()" style="cursor:pointer">×</span>
+            <span>💬 Chat da Sala</span> <span onclick="toggleChat()" style="cursor:pointer">×</span>
         </div>
         <div id="msgs"></div>
         <div style="padding: 10px; display: flex; gap: 5px;">
@@ -335,7 +333,7 @@
         </div>
     </div>
 
-    <!-- Modal de edição/cadastro de imóvel -->
+    <!-- Modal de edição -->
     <div id="m-edit" class="modal"><div class="modal-c">
         <h3>📋 Dados do Imóvel</h3>
         <input type="hidden" id="e-id">
@@ -380,16 +378,15 @@
                 <div id="d-contato-text"></div>
             </div>
             <div id="d-qrcode-container" class="qrcode-canvas"></div>
-            <button class="btn-s btn-sm" onclick="imprimirImovel()">🖨️ Imprimir</button>
         </div>
         <button class="btn-s" onclick="closeM()">Fechar</button>
     </div></div>
 
-    <!-- MODAL CONTRATO (visível para ambos) -->
+    <!-- MODAL CONTRATO -->
     <div id="m-contrato" class="modal"><div class="modal-c" style="max-width: 700px;">
         <h3>📄 Contrato do Imóvel</h3>
         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
-            <button class="btn-p btn-sm" onclick="imprimirContrato()">🖨️ Imprimir Contrato</button>
+            <button class="btn-p btn-sm" onclick="imprimirContrato()">🖨️ Imprimir</button>
             <button class="btn-success btn-sm" onclick="copiarContrato()">📋 Copiar</button>
             <button class="btn-s btn-sm admin" onclick="salvarContrato()">💾 Salvar Template</button>
         </div>
@@ -436,8 +433,8 @@
     <div id="m-supabase" class="modal"><div class="modal-c">
         <h3>☁️ Configurar Supabase</h3>
         <p style="font-size:0.8rem;color:#666;">Sincroniza dados entre admin e clientes via rede Tor</p>
-        <input type="text" id="sb-url" placeholder="URL do Supabase" value="https://fodekmainscpeyfvwbrb.supabase.co">
-        <input type="text" id="sb-key" placeholder="Chave anon/public" value="sb_publishable_TNpTLiYWHjOajcjTUCll5w_sUWxlPAD">
+        <input type="text" id="sb-url" placeholder="URL do Supabase">
+        <input type="text" id="sb-key" placeholder="Chave anon/public">
         <input type="text" id="sb-table" placeholder="Tabela" value="imoveis">
         <button class="btn-p" onclick="salvarConfigSupabase()">💾 Conectar</button>
         <button class="btn-s" onclick="testarSupabase()">🔌 Testar</button>
@@ -445,23 +442,15 @@
         <button class="btn-s" onclick="closeM()">Fechar</button>
     </div></div>
 
-    <!-- Modais P2P -->
+    <!-- Modal entrar na sala -->
     <div id="m-join" class="modal"><div class="modal-c">
         <h3>🌐 Entrar na Sala</h3>
-        <p style="font-size:0.8rem;color:#666;">Digite o ID do Host para receber os dados</p>
-        <input type="text" id="in-id" placeholder="ID do Host">
-        <button class="btn-p" onclick="conectarP2P('client')">🔗 Conectar</button>
-        <button class="btn-s" onclick="closeM()">Cancelar</button>
-    </div></div>
-    <div id="m-host" class="modal"><div class="modal-c">
-        <h3>📡 Criar Sala (Admin)</h3>
-        <p style="font-size:0.8rem;color:#666;">Crie uma sala para compartilhar os dados com clientes</p>
-        <input type="text" id="ho-id" placeholder="Nome da Loja">
-        <button class="btn-p" onclick="conectarP2P('host')">🚀 Iniciar</button>
+        <p style="font-size:0.8rem;color:#666;">Digite o nome da sala para receber os dados</p>
+        <input type="text" id="in-sala" placeholder="Nome da sala (ex: teste2)">
+        <button class="btn-p" onclick="entrarSala()">🔗 Entrar</button>
         <button class="btn-s" onclick="closeM()">Cancelar</button>
     </div></div>
 
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script>
         // ============================================
         // BANCO DE DADOS LOCAL
@@ -474,6 +463,109 @@
             'LOCATÁRIO: {{locatario}}, portador do documento {{documento}}, firma contrato do imóvel {{titulo}} (ID {{id}}), em {{endereco}}, com {{quartos}} quartos, {{banheiros}} banheiro(s), área {{area}}m², valor R$ {{preco}}.';
         let clienteSelecionado = null;
         let isClienteMode = false;
+        let salaAtual = 'local';
+        let socket = null;
+
+        // ============================================
+        // SOCKET.IO
+        // ============================================
+        const SOCKET_URL = window.location.origin;
+
+        function conectarSocket(sala, isAdmin = false) {
+            if (socket) {
+                socket.disconnect();
+                socket = null;
+            }
+
+            socket = io(SOCKET_URL, {
+                query: { sala: sala, role: isAdmin ? 'admin' : 'cliente' }
+            });
+
+            document.getElementById('socketStatus').className = 'status-socket conectando';
+            document.getElementById('socketStatus').textContent = '🔌 Conectando...';
+
+            socket.on('connect', () => {
+                document.getElementById('socketStatus').className = 'status-socket online';
+                document.getElementById('socketStatus').textContent = '🔌 Online';
+                document.getElementById('status').innerText = `✅ Conectado à sala: ${sala}`;
+                console.log(`✅ Conectado à sala: ${sala}`);
+
+                if (isAdmin) {
+                    // Admin envia os dados
+                    socket.emit('sync_db', { sala: sala, data: db });
+                } else {
+                    // Cliente solicita dados
+                    socket.emit('request_db', { sala: sala });
+                }
+            });
+
+            socket.on('db_update', (data) => {
+                console.log(`📥 Dados recebidos da sala ${sala}:`, data.length, 'imóveis');
+                db = data;
+                localStorage.setItem('imoveis_db', JSON.stringify(db));
+                render();
+                atualizarFiltro();
+                document.getElementById('status').innerText = `📥 ${db.length} imóveis carregados da sala`;
+            });
+
+            socket.on('chat_message', (msg) => {
+                addMsg(msg, 'them');
+                document.getElementById('notif').style.display = 'inline';
+            });
+
+            socket.on('connect_error', (err) => {
+                console.error('❌ Erro de conexão:', err);
+                document.getElementById('socketStatus').className = 'status-socket offline';
+                document.getElementById('socketStatus').textContent = '🔌 Offline';
+            });
+
+            socket.on('disconnect', () => {
+                document.getElementById('socketStatus').className = 'status-socket offline';
+                document.getElementById('socketStatus').textContent = '🔌 Offline';
+                document.getElementById('status').innerText = '⚠️ Desconectado';
+            });
+
+            salaAtual = sala;
+            document.getElementById('salaBadge').textContent = `🏠 Sala: ${sala}`;
+        }
+
+        function criarSala() {
+            const sala = prompt('Nome da sala para criar (ex: loja1):');
+            if (!sala) return;
+            isClienteMode = false;
+            document.body.classList.remove('cliente-mode');
+            document.getElementById('roleBadge').className = 'role-badge admin';
+            document.getElementById('roleBadge').textContent = '👑 Admin';
+            conectarSocket(sala, true);
+            // Enviar dados existentes
+            setTimeout(() => {
+                if (socket) {
+                    socket.emit('sync_db', { sala: sala, data: db });
+                    console.log(`📤 Dados enviados para sala ${sala}`);
+                }
+            }, 1000);
+            alert(`✅ Sala "${sala}" criada! Compartilhe o nome com os clientes.`);
+        }
+
+        function entrarSala() {
+            const sala = document.getElementById('in-sala').value.trim();
+            if (!sala) { alert('Digite o nome da sala.'); return; }
+            closeM();
+
+            isClienteMode = true;
+            document.body.classList.add('cliente-mode');
+            document.getElementById('roleBadge').className = 'role-badge cliente';
+            document.getElementById('roleBadge').textContent = '👤 Cliente';
+
+            conectarSocket(sala, false);
+        }
+
+        function enviarDadosSocket() {
+            if (socket && salaAtual !== 'local') {
+                socket.emit('sync_db', { sala: salaAtual, data: db });
+                console.log('📤 Dados enviados via Socket.IO');
+            }
+        }
 
         // ============================================
         // SUPABASE
@@ -510,18 +602,12 @@
                     .select('count', { count: 'exact', head: true });
 
                 if (error) {
-                    document.getElementById('supabaseStatus').className = 'status-supabase offline';
-                    document.getElementById('supabaseStatus').textContent = '☁️ Erro';
                     alert('❌ Erro: ' + error.message);
                 } else {
-                    document.getElementById('supabaseStatus').className = 'status-supabase online';
-                    document.getElementById('supabaseStatus').textContent = '☁️ Online';
                     alert('✅ Conectado!');
                     await sincronizarSupabase();
                 }
             } catch (err) {
-                document.getElementById('supabaseStatus').className = 'status-supabase offline';
-                document.getElementById('supabaseStatus').textContent = '☁️ Offline';
                 alert('❌ Erro: ' + err.message);
             }
         }
@@ -530,23 +616,13 @@
             supabaseClient = null;
             supabaseConfig = null;
             localStorage.removeItem('supabase_config');
-            document.getElementById('supabaseStatus').className = 'status-supabase offline';
-            document.getElementById('supabaseStatus').textContent = '☁️ Offline';
             alert('⛔ Desconectado.');
             closeM();
         }
 
-        // ============================================
-        // SINCRONIZAÇÃO SUPABASE
-        // ============================================
         async function sincronizarSupabase() {
             if (!supabaseClient || !supabaseConfig) return;
-
             try {
-                document.getElementById('supabaseStatus').className = 'status-supabase sincronizando';
-                document.getElementById('supabaseStatus').textContent = '☁️ Sincronizando...';
-
-                // Buscar do Supabase
                 const { data: supabaseData, error: fetchError } = await supabaseClient
                     .from(supabaseConfig.table)
                     .select('*');
@@ -568,7 +644,6 @@
                         img: item.img || null
                     }));
 
-                    // Mesclar (Supabase tem prioridade)
                     const merged = [...db];
                     supabaseImoveis.forEach(sbItem => {
                         const localIndex = merged.findIndex(l => l.id === sbItem.id);
@@ -585,17 +660,11 @@
                     atualizarFiltro();
                 }
 
-                // Enviar dados locais para o Supabase
                 await enviarParaSupabase();
-
-                document.getElementById('supabaseStatus').className = 'status-supabase online';
-                document.getElementById('supabaseStatus').textContent = '☁️ Online';
-                console.log('✅ Sincronização concluída!');
+                console.log('✅ Sincronização com Supabase concluída!');
 
             } catch (err) {
                 console.error('❌ Erro na sincronização:', err);
-                document.getElementById('supabaseStatus').className = 'status-supabase offline';
-                document.getElementById('supabaseStatus').textContent = '☁️ Erro';
             }
         }
 
@@ -628,126 +697,6 @@
         function forcarSincronizacao() {
             if (!supabaseClient) { alert('Conecte-se ao Supabase primeiro!'); return; }
             sincronizarSupabase();
-        }
-
-        // ============================================
-        // PEERJS (P2P) - ADMIN HOST E CLIENTE
-        // ============================================
-        let peer = null;
-        let activeConnection = null;
-        let isHost = false;
-        let peerId = null;
-
-        function conectarP2P(mode) {
-            const id = mode === 'host' ? document.getElementById('ho-id').value : document.getElementById('in-id').value;
-            if (!id) { alert('Digite um ID'); return; }
-            closeM();
-
-            if (peer) { peer.destroy();
-                peer = null; }
-
-            if (mode === 'host') {
-                // ADMIN - HOST
-                peer = new Peer(id);
-                peerId = id;
-                isHost = true;
-                isClienteMode = false;
-                document.body.classList.remove('cliente-mode');
-                document.getElementById('roleBadge').className = 'role-badge admin';
-                document.getElementById('roleBadge').textContent = '👑 Admin';
-
-                peer.on('open', () => {
-                    document.getElementById('status').innerText = `📡 Host: ${id}`;
-                    document.getElementById('peerStatus').className = 'peer-status host';
-                    document.getElementById('peerStatus').textContent = '📡 Host';
-                    alert(`✅ Sala criada! ID: ${id}\nCompartilhe este ID com os clientes.`);
-                });
-
-                peer.on('connection', (conn) => {
-                    activeConnection = conn;
-                    document.getElementById('status').innerText = `📡 Cliente conectado!`;
-                    console.log('👤 Cliente conectado:', conn.peer);
-
-                    conn.on('data', (data) => {
-                        if (data.type === 'req') {
-                            conn.send({ type: 'db', data: db });
-                            console.log('📤 Dados enviados para o cliente');
-                        }
-                        if (data.type === 'chat') {
-                            addMsg(data.data, 'them');
-                            document.getElementById('notif').style.display = 'inline';
-                        }
-                    });
-
-                    setTimeout(() => {
-                        conn.send({ type: 'db', data: db });
-                    }, 500);
-                });
-
-                peer.on('error', (err) => {
-                    console.error('❌ Erro:', err);
-                    alert('❌ Erro: ' + err.message);
-                });
-
-            } else {
-                // CLIENTE - entra na sala
-                peer = new Peer();
-                isHost = false;
-                isClienteMode = true;
-                document.body.classList.add('cliente-mode');
-                document.getElementById('roleBadge').className = 'role-badge cliente';
-                document.getElementById('roleBadge').textContent = '👤 Cliente';
-
-                peer.on('open', (myId) => {
-                    peerId = myId;
-                    document.getElementById('status').innerText = `🔗 Conectando a ${id}...`;
-
-                    activeConnection = peer.connect(id);
-
-                    activeConnection.on('open', () => {
-                        document.getElementById('status').innerText = `✅ Conectado a ${id}`;
-                        document.getElementById('peerStatus').className = 'peer-status conectado';
-                        document.getElementById('peerStatus').textContent = '📡 Cliente';
-                        alert('✅ Conectado! Recebendo dados...');
-
-                        // Solicitar dados
-                        activeConnection.send({ type: 'req' });
-                    });
-
-                    activeConnection.on('data', (data) => {
-                        if (data.type === 'db') {
-                            db = data.data;
-                            localStorage.setItem('imoveis_db', JSON.stringify(db));
-                            render();
-                            atualizarFiltro();
-                            console.log('📥 Dados recebidos:', db.length, 'imóveis');
-                            document.getElementById('status').innerText =
-                                `📥 ${db.length} imóveis carregados`;
-                        }
-                        if (data.type === 'chat') {
-                            addMsg(data.data, 'them');
-                            document.getElementById('notif').style.display = 'inline';
-                        }
-                    });
-
-                    activeConnection.on('error', (err) => {
-                        console.error('❌ Erro:', err);
-                        alert('❌ Erro ao conectar: ' + err.message);
-                    });
-                });
-
-                peer.on('error', (err) => {
-                    console.error('❌ Erro PeerJS:', err);
-                    alert('❌ Erro: ' + err.message);
-                });
-            }
-        }
-
-        function enviarP2P() {
-            if (activeConnection && isHost) {
-                activeConnection.send({ type: 'db', data: db });
-                console.log('📤 Atualização enviada via P2P');
-            }
         }
 
         // ============================================
@@ -804,7 +753,7 @@
         }
 
         // ============================================
-        // CRUD (apenas Admin)
+        // CRUD
         // ============================================
         function openEdit(id = null) {
             if (isClienteMode) { alert('Apenas o Admin pode editar.'); return; }
@@ -855,7 +804,7 @@
                 closeM();
                 render();
                 atualizarFiltro();
-                enviarP2P();
+                enviarDadosSocket();
                 enviarParaSupabase();
                 alert('✅ Imóvel salvo!');
             };
@@ -875,13 +824,13 @@
                 localStorage.setItem('imoveis_db', JSON.stringify(db));
                 render();
                 atualizarFiltro();
-                enviarP2P();
+                enviarDadosSocket();
                 enviarParaSupabase();
             }
         }
 
         // ============================================
-        // DETALHES E QR CODE
+        // DETALHES
         // ============================================
         function openDetalhes(id) {
             const i = db.find(x => x.id == id);
@@ -934,10 +883,6 @@
             alert("Contato copiado!");
         }
 
-        function imprimirImovel() {
-            window.print();
-        }
-
         // ============================================
         // FILTRO
         // ============================================
@@ -957,10 +902,8 @@
 
         function sendChat() {
             const i = document.getElementById('chat-i');
-            if (!i.value) return;
-            if (activeConnection) {
-                activeConnection.send({ type: 'chat', data: i.value });
-            }
+            if (!i.value || !socket) return;
+            socket.emit('chat_message', { sala: salaAtual, msg: i.value });
             addMsg(i.value, 'me');
             i.value = '';
         }
@@ -1008,7 +951,7 @@
                     renderizarClientes();
                     atualizarFiltroDocumentos();
                     renderizarPreview();
-                    enviarP2P();
+                    enviarDadosSocket();
                     enviarParaSupabase();
                     alert('✅ Dados importados!');
                 } catch (err) { alert('❌ Erro: ' + err.message); }
@@ -1104,7 +1047,7 @@
         }
 
         // ============================================
-        // CLIENTES (apenas Admin)
+        // CLIENTES
         // ============================================
         function adicionarCliente() {
             if (isClienteMode) { alert('Apenas Admin pode gerenciar clientes.'); return; }
@@ -1267,7 +1210,7 @@
         }
 
         // ============================================
-        // INICIALIZAÇÃO
+        // INICIALIZAÇÃO - Suporte a URL com sala
         // ============================================
         window.onload = () => {
             atualizarFiltro();
@@ -1279,6 +1222,22 @@
             atualizarFiltroDocumentos();
             renderizarPreview();
 
+            // Verificar se há sala na URL
+            const params = new URLSearchParams(window.location.search);
+            const salaURL = params.get('sala');
+            if (salaURL) {
+                // Entrar automaticamente na sala como cliente
+                setTimeout(() => {
+                    document.getElementById('in-sala').value = salaURL;
+                    isClienteMode = true;
+                    document.body.classList.add('cliente-mode');
+                    document.getElementById('roleBadge').className = 'role-badge cliente';
+                    document.getElementById('roleBadge').textContent = '👤 Cliente';
+                    conectarSocket(salaURL, false);
+                    document.getElementById('status').innerText = `🔗 Entrando na sala: ${salaURL}...`;
+                }, 500);
+            }
+
             if (supabaseConfig) {
                 testarSupabase();
             }
@@ -1289,9 +1248,10 @@
                 }
             });
 
-            console.log('🚀 Sistema iniciado!');
+            console.log('🚀 Sistema Socket.IO iniciado!');
             console.log(`📦 ${db.length} imóveis`);
             console.log(`👥 ${clientes.length} clientes`);
+            if (salaURL) console.log(`🏠 Sala automática: ${salaURL}`);
         };
     </script>
 </body>
