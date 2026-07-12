@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>📋 Sistema de Contratos + Clientes</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Roboto, system-ui, sans-serif;
+        }
+        body {
+            background: #eef2f7;
+            padding: 1.5rem 1rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .app {
+            max-width: 1300px;
+            width: 100%;
+            background: white;
+            border-radius: 36px;
+            padding: 2rem 2rem 2.5rem;
+            box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.15);
+        }
+        h1 {
+            font-size: 2rem;
+            color: #0b1f3b;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .badge {
+            background: #dce6f0;
+            padding: 0.1rem 1rem;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #1e415f;
+        }
+        .tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin: 1.5rem 0 1rem;
+            flex-wrap: wrap;
+            border-bottom: 2px solid #dde7f2;
+            padding-bottom: 0.5rem;
+        }
+        .tab-btn {
+            padding: 0.5rem 1.8rem;
+            border: none;
+            background: transparent;
+            font-weight: 600;
+            color: #4a6a89;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: 0.15s;
+            font-size: 0.95rem;
+        }
+        .tab-btn.active {
+            background: #0f2b4a;
+            color: white;
+        }
+        .tab-btn:hover:not(.active) {
+            background: #e4edf6;
+        }
+        .tab-content {
+            display: none;
+            animation: fade 0.2s;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        @keyframes fade {
+            from {
+                opacity: 0.3;
+                transform: translateY(6px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .grid-2col {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin: 1.5rem 0 2rem;
+        }
+        @media (max-width: 780px) {
+            .grid-2col {
+                grid-template-columns: 1fr;
+                gap: 1.5rem;
+            }
+        }
+        .admin-card {
+            background: #f9fcff;
+            border-radius: 24px;
+            padding: 1.5rem 1.8rem;
+            border: 1px solid #dde7f2;
+        }
+        .admin-card h2 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #103753;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .campo-flex {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+            margin-bottom: 0.9rem;
+        }
+        .campo-flex label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            color: #3e5e7c;
+        }
+        .campo-flex input,
+        .campo-flex textarea,
+        .campo-flex select {
+            padding: 0.6rem 0.9rem;
+            border: 1px solid #cbd9e6;
+            border-radius: 12px;
+            font-size: 0.95rem;
+            background: white;
+            transition: 0.15s;
+        }
+        .campo-flex input:focus,
+        .campo-flex textarea:focus,
+        .campo-flex select:focus {
+            border-color: #2b6f9e;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(43, 111, 158, 0.15);
+        }
+        .campo-flex textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        .btn {
+            border: none;
+            background: white;
+            padding: 0.55rem 1.6rem;
+            border-radius: 60px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            border: 1px solid #b6ccdd;
+            color: #1a3753;
+            cursor: pointer;
+            transition: 0.1s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-primary {
+            background: #0f2b4a;
+            border-color: #0f2b4a;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #1a3e64;
+        }
+        .btn-success {
+            background: #1d6f4a;
+            border-color: #1d6f4a;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #268a5d;
+        }
+        .btn-warning {
+            background: #a06b2b;
+            border-color: #a06b2b;
+            color: white;
+        }
+        .btn-warning:hover {
+            background: #b87d36;
+        }
+        .btn-outline {
+            background: transparent;
+            border: 1px solid #95b2cd;
+        }
+        .btn-outline:hover {
+            background: #e4eefa;
+        }
+        .btn-danger {
+            background: #b13b3b;
+            border-color: #b13b3b;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #c94a4a;
+        }
+        .btn-sm {
+            padding: 0.3rem 1rem;
+            font-size: 0.8rem;
+        }
+        .btn-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.7rem;
+            margin-top: 0.5rem;
+        }
+        .contrato-preview {
+            background: #f2f7fe;
+            border-radius: 20px;
+            padding: 1.8rem 2rem;
+            border: 1px solid #c7d9ea;
+            white-space: pre-wrap;
+            font-family: 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            min-height: 200px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .assinatura-area {
+            margin-top: 1.8rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.8rem 2rem;
+            font-size: 0.9rem;
+            border-top: 2px dashed #b3cbdf;
+            padding-top: 1.5rem;
+        }
+        .assinatura-item {
+            border-bottom: 1px solid #6d8aaa;
+            padding-bottom: 0.3rem;
+            color: #1c3d5c;
+        }
+        .toast {
+            background: #0b2a44;
+            color: white;
+            padding: 0.5rem 1.4rem;
+            border-radius: 60px;
+            font-size: 0.9rem;
+            margin-top: 1rem;
+            display: inline-block;
+        }
+        .hide {
+            display: none;
+        }
+        .cliente-item {
+            background: #f5f9ff;
+            padding: 0.8rem 1.2rem;
+            border-radius: 16px;
+            border: 1px solid #d5e2ef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 0.6rem;
+        }
+        .cliente-item .info {
+            display: flex;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .cliente-item .info strong {
+            color: #0b2f50;
+        }
+        .filtro-cliente {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.2rem;
+        }
+        .filtro-cliente input,
+        .filtro-cliente select {
+            padding: 0.5rem 1rem;
+            border-radius: 40px;
+            border: 1px solid #c5d6e8;
+            font-size: 0.9rem;
+            flex: 1 1 200px;
+        }
+        .campos-adicionais {
+            background: #eef4fa;
+            border-radius: 16px;
+            padding: 0.8rem 1.2rem;
+            margin-top: 0.5rem;
+        }
+        .campos-adicionais .campo-flex {
+            margin-bottom: 0.5rem;
+        }
+        .btn-remover-campo {
+            background: none;
+            border: none;
+            color: #b13b3b;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.8rem;
+            margin-left: 6px;
+        }
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            .print-area,
+            .print-area * {
+                visibility: visible;
+            }
+            .print-area {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                padding: 2rem;
+                background: white;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app" id="app">
+        <div style="display:flex; justify-content:space-between; flex-wrap:wrap;">
+            <h1>📄 Sistema de Contratos <span class="badge">clientes + template</span></h1>
+            <div class="btn-group no-print">
+                <button class="btn btn-success" id="btnSalvarAdmin">💾 Salvar contrato</button>
+                <button class="btn btn-primary" id="btnImprimir">🖨️ Imprimir</button>
+            </div>
+        </div>
+
+        <!-- TABS -->
+        <div class="tabs no-print">
+            <button class="tab-btn active" data-tab="tabContrato">📝 Contrato</button>
+            <button class="tab-btn" data-tab="tabClientes">👥 Clientes</button>
+        </div>
+
+        <!-- TAB CONTRATO -->
+        <div id="tabContrato" class="tab-content active">
+            <div class="grid-2col">
+                <!-- DADOS DO IMÓVEL -->
+                <div class="admin-card">
+                    <h2>🏠 Imóvel <button class="btn btn-outline btn-sm" id="btnAddCampoImovel">+ campo</button></h2>
+                    <div id="camposImovel">
+                        <div class="campo-flex"><label>ID</label><input type="text" class="campo-id" value="1783815347654" /></div>
+                        <div class="campo-flex"><label>Título</label><input type="text" class="campo-titulo" value="Apartamento Jardins" /></div>
+                        <div class="campo-flex"><label>Tipo</label><input type="text" class="campo-tipo" value="Apartamento" /></div>
+                        <div class="campo-flex"><label>Quartos</label><input type="text" class="campo-quartos" value="2" /></div>
+                        <div class="campo-flex"><label>Banheiros</label><input type="text" class="campo-banheiros" value="1" /></div>
+                        <div class="campo-flex"><label>Área (m²)</label><input type="text" class="campo-area" value="68" /></div>
+                        <div class="campo-flex"><label>Endereço</label><input type="text" class="campo-endereco" value="Rua das Flores, 123, SP" /></div>
+                        <div class="campo-flex"><label>Preço (R$)</label><input type="text" class="campo-preco" value="3200" /></div>
+                        <div class="campo-flex"><label>Contato</label><input type="text" class="campo-contato" value="(11) 99999-8888" /></div>
+                        <div class="campo-flex"><label>QR Code</label><input type="text" class="campo-qrcode" value="QR-2026-001" /></div>
+                        <div class="campo-flex"><label>Imagem</label><input type="text" class="campo-img" value="foto_apto.jpg" /></div>
+                    </div>
+                    <div id="camposImovelExtra"></div>
+                </div>
+
+                <!-- DADOS DO LOCATÁRIO + TEMPLATE -->
+                <div class="admin-card">
+                    <h2>🧑‍💼 Locatário <button class="btn btn-outline btn-sm" id="btnAddCampoLocatario">+ campo</button></h2>
+                    <div id="camposLocatario">
+                        <div class="campo-flex"><label>Nome</label><input type="text" class="campo-locatario" value="Carlos Eduardo Silva" /></div>
+                        <div class="campo-flex"><label>Documento</label><input type="text" class="campo-documento" value="MG-12.345.678" /></div>
+                        <div class="campo-flex"><label>Empresa</label><input type="text" class="campo-empresa" value="Silva & Associados" /></div>
+                        <div class="campo-flex"><label>E-mail</label><input type="text" class="campo-email" value="carlos@email.com" /></div>
+                        <div class="campo-flex"><label>Telefone</label><input type="text" class="campo-telefone" value="(11) 98888-7777" /></div>
+                    </div>
+                    <div id="camposLocatarioExtra"></div>
+
+                    <hr style="margin:1.2rem 0; border-color:#d5e0eb;" />
+                    <h2 style="font-size:1rem;">📝 Template</h2>
+                    <div class="campo-flex">
+                        <label>Variáveis: {{id}}, {{titulo}}, {{tipo}}, {{quartos}}, {{banheiros}}, {{area}}, {{endereco}}, {{preco}}, {{contato}}, {{qrcode}}, {{img}}, {{locatario}}, {{documento}}, {{empresa}}, {{email}}, {{telefone}} + campos extras</label>
+                        <textarea id="templateContrato" rows="6">LOCATÁRIO: {{locatario}}, portador do documento {{documento}}, em pleno gozo de seus direitos civis, firma o presente contrato de locação do imóvel {{titulo}} (ID {{id}}), situado em {{endereco}}, com {{quartos}} quartos, {{banheiros}} banheiro(s) e área de {{area}}m², pelo valor mensal de R$ {{preco}}.
+
+                        _________________________________
+                        Assinatura física do locatário / empresa
+
+                        _________________________________
+                        Assinatura digital do locatário / empresa
+
+                        _________________________________
+                        Testemunha 1 (opcional)
+
+                        _________________________________
+                        Testemunha 2 (opcional)
+
+                        _________________________________
+                        Assinatura física do locador / imobiliária
+
+                        _________________________________
+                        Assinatura digital do locador / imobiliária</textarea>
+                    </div>
+                    <div class="btn-group">
+                        <button class="btn btn-outline btn-sm" id="btnAplicarTemplate">🔁 Aplicar</button>
+                        <button class="btn btn-outline btn-sm" id="btnRestaurarTemplate">↩️ Restaurar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PREVIEW CONTRATO -->
+            <div style="margin-top:0.5rem;">
+                <div style="display:flex; justify-content:space-between; flex-wrap:wrap;">
+                    <h2 style="font-size:1.3rem; color:#0b2b47;">📜 Contrato gerado</h2>
+                    <span class="badge" id="statusVariaveis">✅ variáveis resolvidas</span>
+                </div>
+                <div class="contrato-preview print-area" id="previewContrato">Carregando...</div>
+                <div class="assinatura-area no-print">
+                    <div class="assinatura-item">📍 Assinatura física locatário <span>(_________________)</span></div>
+                    <div class="assinatura-item">📍 Assinatura digital locatário <span>(_________________)</span></div>
+                    <div class="assinatura-item">📍 Testemunha 1 <span>(_________________)</span></div>
+                    <div class="assinatura-item">📍 Testemunha 2 <span>(_________________)</span></div>
+                    <div class="assinatura-item">📍 Assinatura física locador <span>(_________________)</span></div>
+                    <div class="assinatura-item">📍 Assinatura digital locador <span>(_________________)</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB CLIENTES -->
+        <div id="tabClientes" class="tab-content">
+            <div style="display:flex; justify-content:space-between; flex-wrap:wrap; margin-bottom:1.2rem;">
+                <h2 style="font-size:1.3rem; color:#0b2b47;">👥 Lista de clientes</h2>
+                <button class="btn btn-primary" id="btnAddCliente">+ Adicionar cliente</button>
+            </div>
+
+            <!-- Filtro -->
+            <div class="filtro-cliente">
+                <input type="text" id="filtroNome" placeholder="🔍 Filtrar por nome..." />
+                <select id="filtroDocumento"><option value="">Todos documentos</option></select>
+                <button class="btn btn-outline btn-sm" id="btnLimparFiltro">Limpar</button>
+            </div>
+
+            <div id="listaClientes">
+                <!-- clientes serão renderizados aqui -->
+                <div style="color:#4f6f8f; text-align:center; padding:2rem;">Nenhum cliente cadastrado.</div>
+            </div>
+        </div>
+
+        <!-- feedback -->
+        <div id="feedback" class="toast hide"></div>
+    </div>
+
+    <script>
+        (function() {
+            // ----- ELEMENTOS -----
+            const $ = id => document.getElementById(id);
+            const preview = $('previewContrato');
+            const templateArea = $('templateContrato');
+            const feedback = $('feedback');
+            const listaClientes = $('listaClientes');
+            const filtroNome = $('filtroNome');
+            const filtroDocumento = $('filtroDocumento');
+
+            // ----- ESTADO -----
+            let clientes = [];
+            let camposExtrasImovel = [];
+            let camposExtrasLocatario = [];
+
+            // ----- CARREGAR DO LOCALSTORAGE -----
+            function carregarDados() {
+                try {
+                    const raw = localStorage.getItem('contratoAdminData');
+                    if (raw) {
+                        const dados = JSON.parse(raw);
+                        if (dados.imovel) {
+                            Object.keys(dados.imovel).forEach(key => {
+                                const el = document.querySelector(`.campo-${key}`);
+                                if (el) el.value = dados.imovel[key] || '';
+                            });
+                            if (dados.imovel.extras) {
+                                camposExtrasImovel = dados.imovel.extras || [];
+                                renderizarCamposExtras('imovel');
+                            }
+                        }
+                        if (dados.locatario) {
+                            Object.keys(dados.locatario).forEach(key => {
+                                const el = document.querySelector(`.campo-${key}`);
+                                if (el) el.value = dados.locatario[key] || '';
+                            });
+                            if (dados.locatario.extras) {
+                                camposExtrasLocatario = dados.locatario.extras || [];
+                                renderizarCamposExtras('locatario');
+                            }
+                        }
+                        if (dados.template) templateArea.value = dados.template;
+                        if (dados.clientes) clientes = dados.clientes || [];
+                        if (dados.camposExtrasImovel) camposExtrasImovel = dados.camposExtrasImovel || [];
+                        if (dados.camposExtrasLocatario) camposExtrasLocatario = dados.camposExtrasLocatario || [];
+                    }
+                } catch (e) { console.warn('Erro ao carregar:', e); }
+                renderizarClientes();
+                renderizarPreview();
+                atualizarFiltroDocumentos();
+            }
+
+            // ----- SALVAR NO LOCALSTORAGE (completo) -----
+            function salvarCompleto() {
+                const imovel = coletarCampos('imovel');
+                const locatario = coletarCampos('locatario');
+                const dados = {
+                    imovel: imovel,
+                    locatario: locatario,
+                    template: templateArea.value,
+                    clientes: clientes,
+                    camposExtrasImovel: camposExtrasImovel,
+                    camposExtrasLocatario: camposExtrasLocatario,
+                    dataAtual: new Date().toISOString()
+                };
+                try {
+                    localStorage.setItem('contratoAdminData', JSON.stringify(dados));
+                    mostrarFeedback('✅ Dados salvos com sucesso!', 'success');
+                } catch (e) {
+                    mostrarFeedback('❌ Erro ao salvar: ' + e.message, 'error');
+                }
+            }
+
+            // ----- COLETAR CAMPOS (incluindo extras) -----
+            function coletarCampos(tipo) {
+                const prefix = tipo === 'imovel' ? 'campo-' : 'campo-';
+                const base = {};
+                const container = tipo === 'imovel' ? document.getElementById('camposImovel') : document.getElementById(
+                'camposLocatario');
+                container.querySelectorAll('input').forEach(inp => {
+                    const cls = Array.from(inp.classList).find(c => c.startsWith('campo-'));
+                    if (cls) {
+                        const key = cls.replace('campo-', '');
+                        base[key] = inp.value;
+                    }
+                });
+                // extras
+                const extraContainer = tipo === 'imovel' ? document.getElementById('camposImovelExtra') : document
+                    .getElementById('camposLocatarioExtra');
+                const extras = {};
+                extraContainer.querySelectorAll('.campo-extra').forEach(inp => {
+                    const name = inp.dataset.name || 'extra';
+                    extras[name] = inp.value;
+                });
+                base.extras = extras;
+                return base;
+            }
+
+            // ----- RENDERIZAR CAMPOS EXTRAS -----
+            function renderizarCamposExtras(tipo) {
+                const container = tipo === 'imovel' ? document.getElementById('camposImovelExtra') : document
+                    .getElementById('camposLocatarioExtra');
+                const lista = tipo === 'imovel' ? camposExtrasImovel : camposExtrasLocatario;
+                container.innerHTML = '';
+                lista.forEach((nome, idx) => {
+                    const div = document.createElement('div');
+                    div.className = 'campo-flex';
+                    div.innerHTML = `
+                        <label>${nome} <button class="btn-remover-campo" data-tipo="${tipo}" data-idx="${idx}">✕</button></label>
+                        <input type="text" class="campo-extra" data-name="${nome}" placeholder="Valor para ${nome}" />
+                    `;
+                    container.appendChild(div);
+                });
+                // eventos para remover
+                container.querySelectorAll('.btn-remover-campo').forEach(btn => {
+                    btn.addEventListener('click', function(e) {
+                        const tipo = this.dataset.tipo;
+                        const idx = parseInt(this.dataset.idx);
+                        if (tipo === 'imovel') {
+                            camposExtrasImovel.splice(idx, 1);
+                            renderizarCamposExtras('imovel');
+                        } else {
+                            camposExtrasLocatario.splice(idx, 1);
+                            renderizarCamposExtras('locatario');
+                        }
+                        salvarCompleto();
+                        renderizarPreview();
+                    });
+                });
+            }
+
+            // ----- ADICIONAR CAMPO EXTRA -----
+            function adicionarCampoExtra(tipo) {
+                const nome = prompt('Nome do campo extra (ex: condominio, vaga):');
+                if (!nome) return;
+                if (tipo === 'imovel') {
+                    camposExtrasImovel.push(nome);
+                    renderizarCamposExtras('imovel');
+                } else {
+                    camposExtrasLocatario.push(nome);
+                    renderizarCamposExtras('locatario');
+                }
+                salvarCompleto();
+                renderizarPreview();
+            }
+
+            // ----- RENDERIZAR PREVIEW (com variáveis) -----
+            function renderizarPreview() {
+                const template = templateArea.value || '';
+                const vars = obterVariaveis();
+                let resultado = template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
+                    if (vars.hasOwnProperty(key) && vars[key] !== undefined) {
+                        return vars[key] || '';
+                    }
+                    return match;
+                });
+                preview.textContent = resultado || '⚠️ Template vazio. Insira um texto com variáveis {{ }}.';
+                // verifica variáveis não resolvidas
+                const unresolved = template.match(/\{\{(\w+)\}\}/g);
+                if (unresolved) {
+                    const allResolved = unresolved.every(m => {
+                        const key = m.replace(/\{\{|\}\}/g, '');
+                        return vars.hasOwnProperty(key) && vars[key] !== undefined && vars[key] !== '';
+                    });
+                    $('statusVariaveis').textContent = allResolved ? '✅ todas resolvidas' :
+                        '⚠️ algumas variáveis não resolvidas';
+                } else {
+                    $('statusVariaveis').textContent = '✅ sem variáveis';
+                }
+            }
+
+            // ----- OBTER VARIÁVEIS (incluindo extras) -----
+            function obterVariaveis() {
+                const base = {};
+                document.querySelectorAll('#camposImovel input, #camposLocatario input').forEach(inp => {
+                    const cls = Array.from(inp.classList).find(c => c.startsWith('campo-'));
+                    if (cls) {
+                        const key = cls.replace('campo-', '');
+                        base[key] = inp.value;
+                    }
+                });
+                // extras imovel
+                document.querySelectorAll('#camposImovelExtra .campo-extra').forEach(inp => {
+                    const name = inp.dataset.name;
+                    if (name) base[name] = inp.value;
+                });
+                // extras locatario
+                document.querySelectorAll('#camposLocatarioExtra .campo-extra').forEach(inp => {
+                    const name = inp.dataset.name;
+                    if (name) base[name] = inp.value;
+                });
+                return base;
+            }
+
+            // ----- CLIENTES -----
+            function renderizarClientes() {
+                const filtro = filtroNome.value.toLowerCase();
+                const docFiltro = filtroDocumento.value;
+                let filtered = clientes;
+                if (filtro) filtered = filtered.filter(c => c.nome.toLowerCase().includes(filtro));
+                if (docFiltro) filtered = filtered.filter(c => c.documento === docFiltro);
+
+                if (filtered.length === 0) {
+                    listaClientes.innerHTML =
+                        `<div style="color:#4f6f8f; text-align:center; padding:2rem;">Nenhum cliente encontrado.</div>`;
+                    return;
+                }
+                let html = '';
+                filtered.forEach((c, idx) => {
+                    html += `
+                        <div class="cliente-item">
+                            <div class="info">
+                                <strong>${c.nome}</strong>
+                                <span>📄 ${c.documento}</span>
+                                <span>📞 ${c.telefone || '—'}</span>
+                                <span>✉️ ${c.email || '—'}</span>
+                            </div>
+                            <div>
+                                <button class="btn btn-primary btn-sm btn-carregar-cliente" data-idx="${idx}">📋 Carregar</button>
+                                <button class="btn btn-danger btn-sm btn-remover-cliente" data-idx="${idx}">✕</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                listaClientes.innerHTML = html;
+                // eventos
+                listaClientes.querySelectorAll('.btn-carregar-cliente').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const idx = parseInt(this.dataset.idx);
+                        carregarCliente(idx);
+                    });
+                });
+                listaClientes.querySelectorAll('.btn-remover-cliente').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        const idx = parseInt(this.dataset.idx);
+                        if (confirm('Remover cliente?')) {
+                            clientes.splice(idx, 1);
+                            salvarCompleto();
+                            renderizarClientes();
+                            atualizarFiltroDocumentos();
+                            mostrarFeedback('Cliente removido', 'info');
+                        }
+                    });
+                });
+            }
+
+            function carregarCliente(idx) {
+                const c = clientes[idx];
+                if (!c) return;
+                // preencher campos do locatário
+                const map = {
+                    'campo-locatario': c.nome,
+                    'campo-documento': c.documento,
+                    'campo-empresa': c.empresa || '',
+                    'campo-email': c.email || '',
+                    'campo-telefone': c.telefone || ''
+                };
+                Object.keys(map).forEach(cls => {
+                    const el = document.querySelector(`.${cls}`);
+                    if (el) el.value = map[cls] || '';
+                });
+                // se tiver extras no cliente, preencher campos extras (se existirem)
+                if (c.extras) {
+                    Object.keys(c.extras).forEach(key => {
+                        const inp = document.querySelector(`#camposLocatarioExtra .campo-extra[data-name="${key}"]`);
+                        if (inp) inp.value = c.extras[key] || '';
+                    });
+                }
+                renderizarPreview();
+                // ativar tab contrato
+                document.querySelector('[data-tab="tabContrato"]').click();
+                mostrarFeedback(`✅ Cliente ${c.nome} carregado`, 'success');
+            }
+
+            function atualizarFiltroDocumentos() {
+                const docSet = new Set();
+                clientes.forEach(c => { if (c.documento) docSet.add(c.documento); });
+                filtroDocumento.innerHTML = '<option value="">Todos documentos</option>';
+                docSet.forEach(d => {
+                    filtroDocumento.innerHTML += `<option value="${d}">${d}</option>`;
+                });
+            }
+
+            // ----- ADICIONAR CLIENTE (modal simplificado) -----
+            function adicionarCliente() {
+                const nome = prompt('Nome do cliente:');
+                if (!nome) return;
+                const documento = prompt('Documento (RG/CPF):') || '—';
+                const telefone = prompt('Telefone:') || '';
+                const email = prompt('E-mail:') || '';
+                const empresa = prompt('Empresa (opcional):') || '';
+                const cliente = { nome, documento, telefone, email, empresa, extras: {} };
+                // opção de adicionar campos extras
+                const addExtra = confirm('Deseja adicionar campos extras para este cliente?');
+                if (addExtra) {
+                    while (true) {
+                        const key = prompt('Nome do campo extra (deixe vazio para finalizar):');
+                        if (!key) break;
+                        const value = prompt(`Valor para "${key}":`) || '';
+                        cliente.extras[key] = value;
+                    }
+                }
+                clientes.push(cliente);
+                salvarCompleto();
+                renderizarClientes();
+                atualizarFiltroDocumentos();
+                mostrarFeedback(`Cliente ${nome} adicionado!`, 'success');
+            }
+
+            // ----- IMPRIMIR -----
+            function imprimir() {
+                renderizarPreview();
+                document.querySelector('.app').classList.add('print-area');
+                window.print();
+                document.querySelector('.app').classList.remove('print-area');
+            }
+
+            // ----- FEEDBACK -----
+            function mostrarFeedback(msg, type = 'info') {
+                feedback.textContent = msg;
+                feedback.style.background = type === 'error' ? '#a13232' : '#0b2a44';
+                feedback.classList.remove('hide');
+                clearTimeout(feedback._timeout);
+                feedback._timeout = setTimeout(() => { feedback.classList.add('hide'); }, 3500);
+            }
+
+            // ----- TABS -----
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+                    document.getElementById(this.dataset.tab).classList.add('active');
+                });
+            });
+
+            // ----- EVENTOS -----
+            document.getElementById('btnAddCampoImovel').addEventListener('click', () => adicionarCampoExtra('imovel'));
+            document.getElementById('btnAddCampoLocatario').addEventListener('click', () => adicionarCampoExtra('locatario'));
+            document.getElementById('btnAddCliente').addEventListener('click', adicionarCliente);
+            document.getElementById('btnSalvarAdmin').addEventListener('click', salvarCompleto);
+            document.getElementById('btnImprimir').addEventListener('click', imprimir);
+            document.getElementById('btnAplicarTemplate').addEventListener('click', renderizarPreview);
+            document.getElementById('btnRestaurarTemplate').addEventListener('click', function() {
+                templateArea.value = `LOCATÁRIO: {{locatario}}, portador do documento {{documento}}, em pleno gozo de seus direitos civis, firma o presente contrato de locação do imóvel {{titulo}} (ID {{id}}), situado em {{endereco}}, com {{quartos}} quartos, {{banheiros}} banheiro(s) e área de {{area}}m², pelo valor mensal de R$ {{preco}}.
+
+                _________________________________
+                Assinatura física do locatário / empresa
+
+                _________________________________
+                Assinatura digital do locatário / empresa
+
+                _________________________________
+                Testemunha 1 (opcional)
+
+                _________________________________
+                Testemunha 2 (opcional)
+
+                _________________________________
+                Assinatura física do locador / imobiliária
+
+                _________________________________
+                Assinatura digital do locador / imobiliária`;
+                renderizarPreview();
+                mostrarFeedback('Template restaurado', 'info');
+            });
+            document.getElementById('btnLimparFiltro').addEventListener('click', function() {
+                filtroNome.value = '';
+                filtroDocumento.value = '';
+                renderizarClientes();
+            });
+            filtroNome.addEventListener('input', renderizarClientes);
+            filtroDocumento.addEventListener('change', renderizarClientes);
+
+            // Atualiza preview ao digitar
+            document.addEventListener('input', (e) => {
+                if (e.target.closest('input, textarea')) {
+                    renderizarPreview();
+                }
+            });
+
+            // ----- INICIALIZAÇÃO -----
+            carregarDados();
+            renderizarCamposExtras('imovel');
+            renderizarCamposExtras('locatario');
+            renderizarClientes();
+            renderizarPreview();
+        })();
+    </script>
+</body>
+</html>
