@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ImóveisGestão | Contratos + QR Code</title>
+    <title>ImóveisGestão | Contratos + Supabase</title>
     <style>
         :root {
             --bg: #f8fafc;
@@ -203,7 +203,7 @@
             padding: 20px;
             border-radius: 12px;
             width: 100%;
-            max-width: 500px;
+            max-width: 700px;
             display: flex;
             flex-direction: column;
             gap: 12px;
@@ -258,13 +258,13 @@
             }
         }
 
-        /* Abas no modal */
         .tab-nav {
             display: flex;
             gap: 4px;
             border-bottom: 2px solid var(--border);
             padding-bottom: 6px;
             margin-bottom: 10px;
+            flex-wrap: wrap;
         }
         .tab-nav button {
             padding: 6px 16px;
@@ -285,7 +285,6 @@
             display: block;
         }
 
-        /* Clientes */
         .cliente-item {
             background: var(--bg);
             padding: 10px 14px;
@@ -296,6 +295,10 @@
             align-items: center;
             flex-wrap: wrap;
             margin-bottom: 8px;
+            cursor: pointer;
+        }
+        .cliente-item:hover {
+            border-color: var(--primary);
         }
         .cliente-item .info {
             display: flex;
@@ -305,6 +308,9 @@
         }
         .cliente-item .info strong {
             color: var(--primary);
+        }
+        .cliente-item.selecionado {
+            border: 2px solid var(--primary);
         }
         .filtro-cliente {
             display: flex;
@@ -342,8 +348,36 @@
             font-weight: bold;
             font-size: 0.8rem;
         }
+        .status-supabase {
+            font-size: 0.7rem;
+            padding: 4px 10px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+        .status-supabase.online {
+            background: var(--success);
+            color: white;
+        }
+        .status-supabase.offline {
+            background: var(--danger);
+            color: white;
+        }
+        .btn-copy {
+            background: var(--primary);
+            color: white;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-copy:hover {
+            opacity: 0.8;
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js">
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js">
     </script>
 </head>
 <body>
@@ -363,6 +397,7 @@
             <button class="btn-s" onclick="exportData()">📤 <span class="txt">Exportar</span></button>
             <input type="file" id="f-in" style="display:none" onchange="importData(event)">
             <button class="btn-s" style="border-color: var(--success); color: var(--success);" onclick="openM('m-contrato')">📄 <span class="txt">Contratos</span></button>
+            <button class="btn-s" style="border-color: var(--primary); color: var(--primary);" onclick="configurarSupabase()">☁️ <span class="txt">Supabase</span></button>
         </div>
 
         <div style="margin-top: auto; display: flex; flex-direction: column; gap: 5px;">
@@ -379,6 +414,7 @@
             <input type="text" id="srch" placeholder="Buscar imóvel..." style="flex:2" oninput="render()">
             <select id="filt" style="flex:1" onchange="render()"><option>Todos</option></select>
             <button class="btn-s btn-sm" onclick="openM('m-contrato')" style="width:auto;">📄 Contrato</button>
+            <span id="supabaseStatus" class="status-supabase offline">☁️ Offline</span>
         </div>
         <div id="status" style="font-size: 0.6rem; color: var(--primary); margin-bottom: 10px; font-weight: bold; text-transform: uppercase;">Modo Local</div>
         <div class="grid" id="list"></div>
@@ -456,6 +492,7 @@
                     <button class="btn-s btn-sm" onclick="addCampoExtra('locatario')">➕ Campo Locatário</button>
                     <button class="btn-success btn-sm" onclick="salvarContrato()">💾 Salvar</button>
                     <button class="btn-p btn-sm" onclick="imprimirContrato()">🖨️ Imprimir</button>
+                    <button class="btn-p btn-sm" style="background:var(--success);" onclick="copiarContrato()">📋 Copiar Contrato</button>
                 </div>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; max-height:300px; overflow-y:auto;">
                     <div>
@@ -513,6 +550,19 @@
             <button class="btn-s" onclick="closeM()">Fechar</button>
     </div></div>
 
+    <!-- Modal Supabase -->
+    <div id="m-supabase" class="modal"><div class="modal-c">
+            <h3>☁️ Configurar Supabase</h3>
+            <p style="font-size:0.8rem;color:#666;">Use para sincronizar dados na rede Tor e entre dispositivos.</p>
+            <input type="text" id="sb-url" placeholder="URL do Supabase (ex: https://xxx.supabase.co)">
+            <input type="text" id="sb-key" placeholder="Chave anon/public (ex: eyJ...)">
+            <input type="text" id="sb-table" placeholder="Nome da tabela (ex: imoveis)" value="imoveis">
+            <button class="btn-p" onclick="salvarConfigSupabase()">💾 Salvar e Conectar</button>
+            <button class="btn-s" onclick="testarSupabase()">🔌 Testar Conexão</button>
+            <button class="btn-danger btn-sm" onclick="desconectarSupabase()">⛔ Desconectar</button>
+            <button class="btn-s" onclick="closeM()">Fechar</button>
+    </div></div>
+
     <!-- Modais de conexão -->
     <div id="m-join" class="modal"><div class="modal-c">
             <h3>Entrar na Sala</h3><input type="text" id="in-id" placeholder="ID do Lojista"><button class="btn-p" onclick="conn('client')">Conectar</button><button class="btn-s" onclick="closeM()">Cancelar</button>
@@ -533,9 +583,164 @@
             'LOCATÁRIO: {{locatario}}, portador do documento {{documento}}, firma contrato do imóvel {{titulo}} (ID {{id}}), em {{endereco}}, com {{quartos}} quartos, {{banheiros}} banheiro(s), área {{area}}m², valor R$ {{preco}}.';
         let clienteSelecionado = null;
 
-        let peer, active, isHost = false;
+        // ===== SUPABASE =====
+        let supabaseClient = null;
+        let supabaseConfig = JSON.parse(localStorage.getItem('supabase_config')) || null;
+
+        function configurarSupabase() {
+            if (supabaseConfig) {
+                document.getElementById('sb-url').value = supabaseConfig.url || '';
+                document.getElementById('sb-key').value = supabaseConfig.key || '';
+                document.getElementById('sb-table').value = supabaseConfig.table || 'imoveis';
+            }
+            openM('m-supabase');
+        }
+
+        function salvarConfigSupabase() {
+            const url = document.getElementById('sb-url').value.trim();
+            const key = document.getElementById('sb-key').value.trim();
+            const table = document.getElementById('sb-table').value.trim() || 'imoveis';
+            if (!url || !key) {
+                alert('Preencha URL e chave do Supabase.');
+                return;
+            }
+            supabaseConfig = { url, key, table };
+            localStorage.setItem('supabase_config', JSON.stringify(supabaseConfig));
+            testarSupabase();
+        }
+
+        async function testarSupabase() {
+            if (!supabaseConfig) {
+                alert('Configure o Supabase primeiro.');
+                return;
+            }
+            try {
+                const { createClient } = supabase;
+                supabaseClient = createClient(supabaseConfig.url, supabaseConfig.key);
+                // Testar conectividade com uma consulta simples
+                const { data, error } = await supabaseClient
+                    .from(supabaseConfig.table)
+                    .select('count', { count: 'exact', head: true });
+
+                if (error) {
+                    document.getElementById('supabaseStatus').className = 'status-supabase offline';
+                    document.getElementById('supabaseStatus').textContent = '☁️ Erro: ' + error.message;
+                    alert('❌ Erro ao conectar: ' + error.message);
+                } else {
+                    document.getElementById('supabaseStatus').className = 'status-supabase online';
+                    document.getElementById('supabaseStatus').textContent = '☁️ Online';
+                    alert('✅ Conectado ao Supabase com sucesso!');
+                    await sincronizarSupabase();
+                }
+            } catch (err) {
+                document.getElementById('supabaseStatus').className = 'status-supabase offline';
+                document.getElementById('supabaseStatus').textContent = '☁️ Offline';
+                alert('❌ Erro: ' + err.message);
+            }
+        }
+
+        function desconectarSupabase() {
+            supabaseClient = null;
+            supabaseConfig = null;
+            localStorage.removeItem('supabase_config');
+            document.getElementById('supabaseStatus').className = 'status-supabase offline';
+            document.getElementById('supabaseStatus').textContent = '☁️ Offline';
+            alert('⛔ Desconectado do Supabase.');
+            closeM();
+        }
+
+        async function sincronizarSupabase() {
+            if (!supabaseClient || !supabaseConfig) return;
+            try {
+                // Buscar dados do Supabase
+                const { data, error } = await supabaseClient
+                    .from(supabaseConfig.table)
+                    .select('*');
+
+                if (error) throw error;
+
+                if (data && data.length > 0) {
+                    // Mesclar dados (preferir dados mais recentes)
+                    const supabaseData = data.map(item => ({
+                        id: item.id || item.imovel_id,
+                        titulo: item.titulo || 'Sem título',
+                        tipo: item.tipo || 'Casa',
+                        quartos: item.quartos || 0,
+                        banheiros: item.banheiros || 0,
+                        area: item.area || 0,
+                        endereco: item.endereco || '',
+                        preco: item.preco || 0,
+                        contato: item.contato || '',
+                        qrcode: item.qrcode || '',
+                        img: item.img || null,
+                        // Campos extras do Supabase
+                        ...Object.keys(item).reduce((acc, key) => {
+                            if (!['id', 'titulo', 'tipo', 'quartos', 'banheiros', 'area', 'endereco',
+                                    'preco', 'contato', 'qrcode', 'img', 'imovel_id'
+                                ].includes(key)) {
+                                acc[key] = item[key];
+                            }
+                            return acc;
+                        }, {})
+                    }));
+
+                    // Mesclar com dados locais
+                    const merged = [...db];
+                    supabaseData.forEach(sbItem => {
+                        const localIndex = merged.findIndex(l => l.id === sbItem.id);
+                        if (localIndex >= 0) {
+                            // Atualizar local com dados do Supabase (mais recente)
+                            merged[localIndex] = { ...merged[localIndex], ...sbItem };
+                        } else {
+                            merged.push(sbItem);
+                        }
+                    });
+
+                    db = merged;
+                    localStorage.setItem('imoveis_db', JSON.stringify(db));
+                    render();
+                    atualizarFiltro();
+                }
+
+                // Enviar dados locais para o Supabase
+                await enviarParaSupabase();
+            } catch (err) {
+                console.error('Erro na sincronização:', err);
+            }
+        }
+
+        async function enviarParaSupabase() {
+            if (!supabaseClient || !supabaseConfig) return;
+            try {
+                // Para cada imóvel, fazer upsert
+                for (const item of db) {
+                    const { error } = await supabaseClient
+                        .from(supabaseConfig.table)
+                        .upsert({
+                            id: item.id,
+                            titulo: item.titulo,
+                            tipo: item.tipo,
+                            quartos: item.quartos,
+                            banheiros: item.banheiros,
+                            area: item.area,
+                            endereco: item.endereco,
+                            preco: item.preco,
+                            contato: item.contato,
+                            qrcode: item.qrcode,
+                            img: item.img,
+                            updated_at: new Date().toISOString()
+                        }, { onConflict: 'id' });
+
+                    if (error) console.error('Erro upsert:', error);
+                }
+            } catch (err) {
+                console.error('Erro ao enviar para Supabase:', err);
+            }
+        }
 
         // ===== PEERJS =====
+        let peer, active, isHost = false;
+
         function conn(mode) {
             const id = mode === 'host' ? document.getElementById('ho-id').value : document.getElementById('in-id').value;
             if (!id) return;
@@ -559,29 +764,42 @@
 
         function sub(c) {
             c.on('data', (d) => {
-                if (d.type === 'db') { db = d.data;
+                if (d.type === 'db') {
+                    db = d.data;
                     document.body.classList.add('view-mode');
                     render();
-                    atualizarFiltro(); }
-                if (d.type === 'chat') { addMsg(d.data, 'them');
-                    document.getElementById('notif').style.display = 'inline'; }
+                    atualizarFiltro();
+                    localStorage.setItem('imoveis_db', JSON.stringify(db));
+                }
+                if (d.type === 'chat') {
+                    addMsg(d.data, 'them');
+                    document.getElementById('notif').style.display = 'inline';
+                }
                 if (d.type === 'req') push();
             });
         }
 
-        function push() { if (active && isHost) active.send({ type: 'db', data: db }); }
+        function push() {
+            if (active && isHost) active.send({ type: 'db', data: db });
+        }
 
         // ===== UI =====
-        function openM(id) { document.getElementById(id).style.display = 'flex'; }
+        function openM(id) {
+            document.getElementById(id).style.display = 'flex';
+        }
 
-        function closeM() { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); }
+        function closeM() {
+            document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+        }
 
         function toggleTheme() {
             const h = document.documentElement;
             h.setAttribute('data-theme', h.getAttribute('data-theme') === 'light' ? 'dark' : 'light');
         }
 
-        function toggleSide() { document.body.classList.toggle('menu-right'); }
+        function toggleSide() {
+            document.body.classList.toggle('menu-right');
+        }
 
         // ===== RENDERIZAÇÃO DOS CARDS =====
         function render() {
@@ -663,6 +881,7 @@
                 render();
                 atualizarFiltro();
                 push();
+                enviarParaSupabase();
             };
             if (file) {
                 const r = new FileReader();
@@ -680,6 +899,7 @@
                 render();
                 atualizarFiltro();
                 push();
+                enviarParaSupabase();
             }
         }
 
@@ -785,6 +1005,7 @@
                 render();
                 atualizarFiltro();
                 push();
+                enviarParaSupabase();
             };
             r.readAsText(e.target.files[0]);
         }
@@ -912,6 +1133,91 @@
             setTimeout(() => win.print(), 500);
         }
 
+        // ===== COPIAR CONTRATO E REDIRECIONAR =====
+        function copiarContrato() {
+            const preview = document.getElementById('previewContrato');
+            const texto = preview.textContent;
+            const vars = obterVariaveis();
+
+            // Gerar link com dados do contrato
+            const dadosContrato = {
+                texto: texto,
+                imovel: {
+                    id: vars.id || '',
+                    titulo: vars.titulo || '',
+                    tipo: vars.tipo || '',
+                    endereco: vars.endereco || '',
+                    preco: vars.preco || ''
+                },
+                locatario: {
+                    nome: vars.locatario || '',
+                    documento: vars.documento || '',
+                    empresa: vars.empresa || '',
+                    email: vars.email || '',
+                    telefone: vars.telefone || ''
+                },
+                data: new Date().toISOString()
+            };
+
+            // Salvar no localStorage para recuperar depois
+            localStorage.setItem('contrato_atual', JSON.stringify(dadosContrato));
+
+            // Copiar o texto do contrato
+            navigator.clipboard.writeText(texto).then(() => {
+                alert('✅ Contrato copiado para a área de transferência!');
+                // Redirecionar para página de contrato (mesma página com parâmetro)
+                const url = window.location.href.split('?')[0] + '?contrato=' + encodeURIComponent(JSON.stringify(
+                    dadosContrato));
+                window.open(url, '_blank');
+            }).catch(() => {
+                // Fallback: copiar via prompt
+                const textarea = document.createElement('textarea');
+                textarea.value = texto;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                alert('✅ Contrato copiado! Redirecionando...');
+                const url = window.location.href.split('?')[0] + '?contrato=' + encodeURIComponent(JSON.stringify(
+                    dadosContrato));
+                window.open(url, '_blank');
+            });
+        }
+
+        // Verificar se há contrato na URL ao carregar
+        function verificarContratoURL() {
+            const params = new URLSearchParams(window.location.search);
+            const contratoData = params.get('contrato');
+            if (contratoData) {
+                try {
+                    const dados = JSON.parse(decodeURIComponent(contratoData));
+                    // Abrir modal com o contrato
+                    setTimeout(() => {
+                        alert('📄 Contrato carregado!\n\n' + dados.texto);
+                        // Preencher campos se existirem
+                        if (dados.imovel) {
+                            document.querySelector('.campo-id').value = dados.imovel.id || '';
+                            document.querySelector('.campo-titulo').value = dados.imovel.titulo || '';
+                            document.querySelector('.campo-tipo').value = dados.imovel.tipo || '';
+                            document.querySelector('.campo-endereco').value = dados.imovel.endereco || '';
+                            document.querySelector('.campo-preco').value = dados.imovel.preco || '';
+                        }
+                        if (dados.locatario) {
+                            document.querySelector('.campo-locatario').value = dados.locatario.nome || '';
+                            document.querySelector('.campo-documento').value = dados.locatario.documento || '';
+                            document.querySelector('.campo-empresa').value = dados.locatario.empresa || '';
+                            document.querySelector('.campo-email').value = dados.locatario.email || '';
+                            document.querySelector('.campo-telefone').value = dados.locatario.telefone || '';
+                        }
+                        renderizarPreview();
+                        openM('m-contrato');
+                    }, 500);
+                } catch (e) {
+                    console.error('Erro ao carregar contrato da URL:', e);
+                }
+            }
+        }
+
         // ===== CLIENTES =====
         function adicionarCliente() {
             const nome = prompt('Nome do cliente:');
@@ -948,10 +1254,9 @@
             }
             let html = '';
             filtered.forEach((c, idx) => {
-                const selected = clienteSelecionado && clienteSelecionado.id === c.id ? 'style="border:2px solid var(--primary);"' :
-                    '';
+                const selected = clienteSelecionado && clienteSelecionado.id === c.id ? 'selecionado' : '';
                 html += `
-                    <div class="cliente-item" ${selected} onclick="selecionarCliente(${idx})">
+                    <div class="cliente-item ${selected}" onclick="selecionarCliente(${idx})">
                         <div class="info">
                             <strong>${c.nome}</strong>
                             <span>📄 ${c.documento}</span>
@@ -981,7 +1286,6 @@
             document.querySelector('.campo-empresa').value = c.empresa || '';
             document.querySelector('.campo-email').value = c.email || '';
             document.querySelector('.campo-telefone').value = c.telefone || '';
-            // extras
             if (c.extras) {
                 document.querySelectorAll('.campo-extra-input').forEach(inp => {
                     const name = inp.dataset.name;
@@ -1031,6 +1335,12 @@
             renderizarClientes();
             atualizarFiltroDocumentos();
             renderizarPreview();
+            verificarContratoURL();
+
+            // Verificar se há configuração do Supabase
+            if (supabaseConfig) {
+                testarSupabase();
+            }
 
             // Atualiza preview ao digitar
             document.addEventListener('input', (e) => {
