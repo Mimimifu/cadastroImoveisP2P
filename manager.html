@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ImóveisGestão | Contratos + Supabase</title>
+    <title>ImóveisGestão | Admin + Cliente</title>
     <style>
         :root {
             --bg: #f8fafc;
@@ -13,6 +13,7 @@
             --border: #e2e8f0;
             --danger: #ef4444;
             --success: #22c55e;
+            --warning: #f59e0b;
         }
         [data-theme="dark"] {
             --bg: #0f172a;
@@ -21,28 +22,10 @@
             --border: #334155;
         }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-        html,
-        body {
-            width: 100%;
-            height: 100%;
-            background: var(--bg);
-            color: var(--text);
-            overflow: hidden;
-            transition: 0.3s;
-        }
-        body {
-            font-family: sans-serif;
-            display: flex;
-            flex-direction: row;
-        }
-        body.menu-right {
-            flex-direction: row-reverse;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { width: 100%; height: 100%; background: var(--bg); color: var(--text); overflow: hidden; transition: 0.3s; }
+        body { font-family: sans-serif; display: flex; flex-direction: row; }
+        body.menu-right { flex-direction: row-reverse; }
 
         aside {
             width: 240px;
@@ -56,17 +39,9 @@
             overflow-y: auto;
             transition: 0.2s;
         }
-        body.menu-right aside {
-            border-right: none;
-            border-left: 1px solid var(--border);
-        }
-        body.collapsed aside {
-            width: 60px;
-            padding: 10px;
-        }
-        body.collapsed .txt {
-            display: none;
-        }
+        body.menu-right aside { border-right: none; border-left: 1px solid var(--border); }
+        body.collapsed aside { width: 60px; padding: 10px; }
+        body.collapsed .txt { display: none; }
 
         main {
             flex: 1;
@@ -83,10 +58,9 @@
             border-radius: 8px;
             border: 1px solid var(--border);
             flex-wrap: wrap;
+            align-items: center;
         }
-        input,
-        select,
-        textarea {
+        input, select, textarea {
             padding: 8px;
             border-radius: 6px;
             border: 1px solid var(--border);
@@ -95,10 +69,7 @@
             outline: none;
             font-family: inherit;
         }
-        textarea {
-            resize: vertical;
-            min-height: 60px;
-        }
+        textarea { resize: vertical; min-height: 60px; }
 
         .grid {
             display: grid;
@@ -114,13 +85,7 @@
             flex-direction: column;
             gap: 5px;
         }
-        .card img {
-            width: 100%;
-            height: 130px;
-            object-fit: cover;
-            border-radius: 8px;
-            background: #eee;
-        }
+        .card img { width: 100%; height: 130px; object-fit: cover; border-radius: 8px; background: #eee; }
 
         button {
             cursor: pointer;
@@ -134,31 +99,12 @@
             gap: 5px;
             transition: 0.2s;
         }
-        .btn-p {
-            background: var(--primary);
-            color: white;
-            width: 100%;
-        }
-        .btn-s {
-            background: transparent;
-            border: 1px solid var(--border);
-            color: var(--text);
-            width: 100%;
-            margin-top: 5px;
-        }
-        .btn-success {
-            background: var(--success);
-            color: white;
-        }
-        .btn-danger {
-            background: var(--danger);
-            color: white;
-        }
-        .btn-sm {
-            padding: 4px 10px;
-            font-size: 0.75rem;
-            width: auto;
-        }
+        .btn-p { background: var(--primary); color: white; width: 100%; }
+        .btn-s { background: transparent; border: 1px solid var(--border); color: var(--text); width: 100%; margin-top: 5px; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-warning { background: var(--warning); color: white; }
+        .btn-sm { padding: 4px 10px; font-size: 0.75rem; width: auto; }
 
         #chat-win {
             position: fixed;
@@ -172,26 +118,15 @@
             display: none;
             flex-direction: column;
             z-index: 2000;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
         }
-        body.menu-right #chat-win {
-            right: auto;
-            left: 20px;
-        }
-        #msgs {
-            flex: 1;
-            padding: 10px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-            font-size: 0.85rem;
-        }
+        body.menu-right #chat-win { right: auto; left: 20px; }
+        #msgs { flex: 1; padding: 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 5px; font-size: 0.85rem; }
 
         .modal {
             position: fixed;
             inset: 0;
-            background: rgba(0, 0, 0, 0.7);
+            background: rgba(0,0,0,0.7);
             display: none;
             align-items: center;
             justify-content: center;
@@ -210,31 +145,20 @@
             max-height: 90vh;
             overflow-y: auto;
         }
-        .modal-c .row {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-        .modal-c .row>* {
-            flex: 1 1 120px;
-        }
-        .qrcode-canvas {
-            display: flex;
-            justify-content: center;
-            margin: 10px 0;
-        }
-        .qrcode-canvas canvas {
-            max-width: 100%;
-            height: auto;
-            border: 1px solid var(--border);
-            border-radius: 8px;
-        }
+        .modal-c .row { display: flex; gap: 8px; flex-wrap: wrap; }
+        .modal-c .row>* { flex: 1 1 120px; }
+        .qrcode-canvas { display: flex; justify-content: center; margin: 10px 0; }
+        .qrcode-canvas canvas { max-width: 100%; height: auto; border: 1px solid var(--border); border-radius: 8px; }
 
-        body.view-mode .admin,
-        body.view-mode .card-admin-btns,
-        body.view-mode .config-btns {
+        /* Modo Cliente: esconde ferramentas de admin */
+        body.cliente-mode .admin,
+        body.cliente-mode .card-admin-btns,
+        body.cliente-mode .config-btns,
+        body.cliente-mode #admin-tools .btn-p,
+        body.cliente-mode #admin-tools .btn-s:not(.btn-cliente-visible) {
             display: none !important;
         }
+        body.cliente-mode .btn-cliente-visible { display: flex !important; }
 
         @media (max-width: 600px) {
             aside {
@@ -248,13 +172,8 @@
                 padding: 5px;
                 justify-content: space-around;
             }
-            main {
-                padding-bottom: 70px;
-            }
-            .txt,
-            .nav-head {
-                display: none !important;
-            }
+            main { padding-bottom: 70px; }
+            .txt, .nav-head { display: none !important; }
         }
 
         .tab-nav {
@@ -273,16 +192,9 @@
             font-size: 0.8rem;
             border: 1px solid transparent;
         }
-        .tab-nav button.active {
-            background: var(--primary);
-            color: white;
-        }
-        .tab-pane {
-            display: none;
-        }
-        .tab-pane.active {
-            display: block;
-        }
+        .tab-nav button.active { background: var(--primary); color: white; }
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
 
         .cliente-item {
             background: var(--bg);
@@ -296,29 +208,17 @@
             margin-bottom: 8px;
             cursor: pointer;
         }
-        .cliente-item:hover {
-            border-color: var(--primary);
-        }
-        .cliente-item .info {
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-            font-size: 0.9rem;
-        }
-        .cliente-item .info strong {
-            color: var(--primary);
-        }
-        .cliente-item.selecionado {
-            border: 2px solid var(--primary);
-        }
+        .cliente-item:hover { border-color: var(--primary); }
+        .cliente-item .info { display: flex; gap: 12px; flex-wrap: wrap; font-size: 0.9rem; }
+        .cliente-item .info strong { color: var(--primary); }
+        .cliente-item.selecionado { border: 2px solid var(--primary); }
         .filtro-cliente {
             display: flex;
             gap: 8px;
             flex-wrap: wrap;
             margin-bottom: 12px;
         }
-        .filtro-cliente input,
-        .filtro-cliente select {
+        .filtro-cliente input, .filtro-cliente select {
             flex: 1 1 150px;
             padding: 6px 12px;
             border-radius: 20px;
@@ -335,10 +235,7 @@
             align-items: center;
             flex-wrap: wrap;
         }
-        .campo-extra input {
-            flex: 1;
-            min-width: 80px;
-        }
+        .campo-extra input { flex: 1; min-width: 80px; }
         .btn-remover-campo {
             background: none;
             border: none;
@@ -353,30 +250,9 @@
             border-radius: 20px;
             display: inline-block;
         }
-        .status-supabase.online {
-            background: var(--success);
-            color: white;
-        }
-        .status-supabase.offline {
-            background: var(--danger);
-            color: white;
-        }
-        .status-supabase.sincronizando {
-            background: #f59e0b;
-            color: white;
-        }
-        .btn-copy {
-            background: var(--primary);
-            color: white;
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            border: none;
-            cursor: pointer;
-        }
-        .btn-copy:hover {
-            opacity: 0.8;
-        }
+        .status-supabase.online { background: var(--success); color: white; }
+        .status-supabase.offline { background: var(--danger); color: white; }
+        .status-supabase.sincronizando { background: var(--warning); color: white; }
         .peer-status {
             font-size: 0.7rem;
             padding: 4px 10px;
@@ -385,15 +261,22 @@
             background: var(--border);
             color: var(--text);
         }
-        .peer-status.conectado {
-            background: var(--success);
-            color: white;
+        .peer-status.conectado { background: var(--success); color: white; }
+        .peer-status.host { background: var(--primary); color: white; }
+        .role-badge {
+            font-size: 0.7rem;
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-weight: bold;
+            text-transform: uppercase;
         }
+        .role-badge.admin { background: var(--primary); color: white; }
+        .role-badge.cliente { background: var(--warning); color: white; }
+        .btn-cliente-visible { display: none !important; }
+        body.cliente-mode .btn-cliente-visible { display: flex !important; }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js">
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js">
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
 </head>
 <body>
 
@@ -403,8 +286,11 @@
             <button class="btn-s" style="width: 35px; padding: 5px;" onclick="document.body.classList.toggle('collapsed')">☰</button>
         </div>
 
+        <!-- Botões visíveis para ambos -->
+        <button class="btn-s btn-cliente-visible" onclick="openM('m-contrato')">📄 <span class="txt">Ver Contrato</span></button>
         <button class="btn-s" id="btn-enter" onclick="openM('m-join')">🌐 <span class="txt">Entrar na Sala</span></button>
 
+        <!-- Ferramentas de Admin (host) -->
         <div class="admin" id="admin-tools" style="display:flex; flex-direction:column; gap:5px; margin-top:10px;">
             <button class="btn-p" onclick="openEdit()">➕ <span class="txt">Novo Imóvel</span></button>
             <button class="btn-s" onclick="openM('m-host')">📡 <span class="txt">Live Host</span></button>
@@ -413,7 +299,7 @@
             <input type="file" id="f-in" style="display:none" onchange="importData(event)">
             <button class="btn-s" style="border-color: var(--success); color: var(--success);" onclick="openM('m-contrato')">📄 <span class="txt">Contratos</span></button>
             <button class="btn-s" style="border-color: var(--primary); color: var(--primary);" onclick="configurarSupabase()">☁️ <span class="txt">Supabase</span></button>
-            <button class="btn-s" style="border-color: var(--danger); color: var(--danger);" onclick="forcarSincronizacao()">🔄 <span class="txt">Forçar Sync</span></button>
+            <button class="btn-s" style="border-color: var(--warning); color: var(--warning);" onclick="forcarSincronizacao()">🔄 <span class="txt">Forçar Sync</span></button>
         </div>
 
         <div style="margin-top: auto; display: flex; flex-direction: column; gap: 5px;">
@@ -429,9 +315,10 @@
         <div class="header">
             <input type="text" id="srch" placeholder="Buscar imóvel..." style="flex:2" oninput="render()">
             <select id="filt" style="flex:1" onchange="render()"><option>Todos</option></select>
-            <button class="btn-s btn-sm" onclick="openM('m-contrato')" style="width:auto;">📄 Contrato</button>
+            <button class="btn-s btn-sm btn-cliente-visible" onclick="openM('m-contrato')" style="width:auto;">📄 Contrato</button>
             <span id="supabaseStatus" class="status-supabase offline">☁️ Offline</span>
             <span id="peerStatus" class="peer-status">📡 Local</span>
+            <span id="roleBadge" class="role-badge admin">👑 Admin</span>
         </div>
         <div id="status" style="font-size: 0.6rem; color: var(--primary); margin-bottom: 10px; font-weight: bold; text-transform: uppercase;">Modo Local</div>
         <div class="grid" id="list"></div>
@@ -439,161 +326,142 @@
 
     <div id="chat-win">
         <div style="padding: 10px; border-bottom: 1px solid var(--border); font-weight: bold; display: flex; justify-content: space-between;">
-            <span>Chat Imóveis</span> <span onclick="toggleChat()" style="cursor:pointer">×</span>
+            <span>💬 Chat</span> <span onclick="toggleChat()" style="cursor:pointer">×</span>
         </div>
         <div id="msgs"></div>
-        <div style="padding: 10px; display: flex; gap: 5px;"><input type="text" id="chat-i" style="flex:1" onkeypress="if(event.key==='Enter') sendChat()"><button onclick="sendChat()" style="background:var(--primary); color:white; padding: 5px 10px; border-radius: 6px;">></button></div>
+        <div style="padding: 10px; display: flex; gap: 5px;">
+            <input type="text" id="chat-i" style="flex:1" onkeypress="if(event.key==='Enter') sendChat()" placeholder="Mensagem...">
+            <button onclick="sendChat()" style="background:var(--primary); color:white; padding: 5px 10px; border-radius: 6px;">➤</button>
+        </div>
     </div>
 
     <!-- Modal de edição/cadastro de imóvel -->
     <div id="m-edit" class="modal"><div class="modal-c">
-            <h3>📋 Dados do Imóvel</h3>
-            <input type="hidden" id="e-id">
-            <input type="text" id="e-titulo" placeholder="Título (ex: Casa em Moema)" required>
-            <select id="e-tipo">
-                <option value="Casa">Casa</option>
-                <option value="Apartamento">Apartamento</option>
-                <option value="Terreno">Terreno</option>
-                <option value="Comercial">Comercial</option>
-                <option value="Outro">Outro</option>
-            </select>
-            <div class="row">
-                <input type="number" id="e-quartos" placeholder="Quartos" min="0">
-                <input type="number" id="e-banheiros" placeholder="Banheiros" min="0">
-                <input type="number" id="e-area" placeholder="Área (m²)" step="0.1" min="0">
-            </div>
-            <input type="text" id="e-endereco" placeholder="Endereço completo">
-            <div class="row">
-                <input type="number" id="e-preco" placeholder="Preço (R$)" step="0.01" min="0">
-                <input type="text" id="e-contato" placeholder="Contato (whatsapp/email)">
-            </div>
-            <input type="text" id="e-qrcode" placeholder="QR Code (texto para link ou informação)">
-            <input type="file" id="e-img" accept="image/*">
-            <button class="btn-p" onclick="save()">💾 Salvar Imóvel</button>
-            <button class="btn-s" onclick="closeM()">Cancelar</button>
+        <h3>📋 Dados do Imóvel</h3>
+        <input type="hidden" id="e-id">
+        <input type="text" id="e-titulo" placeholder="Título" required>
+        <select id="e-tipo">
+            <option value="Casa">Casa</option>
+            <option value="Apartamento">Apartamento</option>
+            <option value="Terreno">Terreno</option>
+            <option value="Comercial">Comercial</option>
+            <option value="Outro">Outro</option>
+        </select>
+        <div class="row">
+            <input type="number" id="e-quartos" placeholder="Quartos" min="0">
+            <input type="number" id="e-banheiros" placeholder="Banheiros" min="0">
+            <input type="number" id="e-area" placeholder="Área (m²)" step="0.1" min="0">
+        </div>
+        <input type="text" id="e-endereco" placeholder="Endereço">
+        <div class="row">
+            <input type="number" id="e-preco" placeholder="Preço (R$)" step="0.01" min="0">
+            <input type="text" id="e-contato" placeholder="Contato">
+        </div>
+        <input type="text" id="e-qrcode" placeholder="QR Code">
+        <input type="file" id="e-img" accept="image/*">
+        <button class="btn-p" onclick="save()">💾 Salvar</button>
+        <button class="btn-s" onclick="closeM()">Cancelar</button>
     </div></div>
 
     <!-- Modal de detalhes -->
     <div id="m-detalhes" class="modal"><div class="modal-c">
-            <h3 id="d-titulo"></h3>
-            <div style="display: flex; flex-direction: column; gap: 8px;">
-                <div><strong>Tipo:</strong> <span id="d-tipo"></span></div>
-                <div><strong>Endereço:</strong> <span id="d-endereco"></span></div>
-                <div class="row">
-                    <span><strong>Quartos:</strong> <span id="d-quartos"></span></span>
-                    <span><strong>Banheiros:</strong> <span id="d-banheiros"></span></span>
-                    <span><strong>Área:</strong> <span id="d-area"></span> m²</span>
-                </div>
-                <div style="font-size: 1.4rem; color: var(--primary); font-weight: bold;" id="d-preco"></div>
-                <div style="background: var(--bg); padding: 10px; border: 2px dashed var(--primary); border-radius: 8px; word-break: break-all;">
-                    <strong>Contato:</strong> <span id="d-contato" style="cursor: pointer;" onclick="copyContato()">📋 copiar</span>
-                    <div id="d-contato-text"></div>
-                </div>
-                <div id="d-qrcode-container" class="qrcode-canvas"></div>
+        <h3 id="d-titulo"></h3>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+            <div><strong>Tipo:</strong> <span id="d-tipo"></span></div>
+            <div><strong>Endereço:</strong> <span id="d-endereco"></span></div>
+            <div class="row">
+                <span><strong>Quartos:</strong> <span id="d-quartos"></span></span>
+                <span><strong>Banheiros:</strong> <span id="d-banheiros"></span></span>
+                <span><strong>Área:</strong> <span id="d-area"></span> m²</span>
             </div>
-            <button class="btn-s" onclick="closeM()">Fechar</button>
+            <div style="font-size: 1.4rem; color: var(--primary); font-weight: bold;" id="d-preco"></div>
+            <div style="background: var(--bg); padding: 10px; border: 2px dashed var(--primary); border-radius: 8px;">
+                <strong>Contato:</strong> <span id="d-contato" style="cursor:pointer;" onclick="copyContato()">📋 copiar</span>
+                <div id="d-contato-text"></div>
+            </div>
+            <div id="d-qrcode-container" class="qrcode-canvas"></div>
+            <button class="btn-s btn-sm" onclick="imprimirImovel()">🖨️ Imprimir</button>
+        </div>
+        <button class="btn-s" onclick="closeM()">Fechar</button>
     </div></div>
 
-    <!-- MODAL CONTRATO + CLIENTES -->
+    <!-- MODAL CONTRATO (visível para ambos) -->
     <div id="m-contrato" class="modal"><div class="modal-c" style="max-width: 700px;">
-            <h3>📄 Contrato e Clientes</h3>
-            <div class="tab-nav">
-                <button class="active" data-tab="tab-template">📝 Template</button>
-                <button data-tab="tab-clientes">👥 Clientes</button>
+        <h3>📄 Contrato do Imóvel</h3>
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
+            <button class="btn-p btn-sm" onclick="imprimirContrato()">🖨️ Imprimir Contrato</button>
+            <button class="btn-success btn-sm" onclick="copiarContrato()">📋 Copiar</button>
+            <button class="btn-s btn-sm admin" onclick="salvarContrato()">💾 Salvar Template</button>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; max-height:250px; overflow-y:auto;">
+            <div>
+                <label style="font-size:0.7rem;font-weight:bold;">🏠 Imóvel</label>
+                <div id="camposImovel">
+                    <div class="campo-flex"><input type="text" class="campo-id" placeholder="ID" value="1783815347654"></div>
+                    <div class="campo-flex"><input type="text" class="campo-titulo" placeholder="Título" value="Apartamento Jardins"></div>
+                    <div class="campo-flex"><input type="text" class="campo-tipo" placeholder="Tipo" value="Apartamento"></div>
+                    <div class="campo-flex"><input type="text" class="campo-quartos" placeholder="Quartos" value="2"></div>
+                    <div class="campo-flex"><input type="text" class="campo-banheiros" placeholder="Banheiros" value="1"></div>
+                    <div class="campo-flex"><input type="text" class="campo-area" placeholder="Área m²" value="68"></div>
+                    <div class="campo-flex"><input type="text" class="campo-endereco" placeholder="Endereço" value="Rua das Flores, 123, SP"></div>
+                    <div class="campo-flex"><input type="text" class="campo-preco" placeholder="Preço" value="3200"></div>
+                    <div class="campo-flex"><input type="text" class="campo-contato" placeholder="Contato" value="(11) 99999-8888"></div>
+                    <div class="campo-flex"><input type="text" class="campo-qrcode" placeholder="QR Code" value="QR-2026-001"></div>
+                    <div class="campo-flex"><input type="text" class="campo-img" placeholder="Imagem" value="foto.jpg"></div>
+                </div>
+                <div id="camposImovelExtra"></div>
             </div>
-
-            <div id="tab-template" class="tab-pane active">
-                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;">
-                    <button class="btn-s btn-sm" onclick="addCampoExtra('imovel')">➕ Campo Imóvel</button>
-                    <button class="btn-s btn-sm" onclick="addCampoExtra('locatario')">➕ Campo Locatário</button>
-                    <button class="btn-success btn-sm" onclick="salvarContrato()">💾 Salvar</button>
-                    <button class="btn-p btn-sm" onclick="imprimirContrato()">🖨️ Imprimir</button>
-                    <button class="btn-p btn-sm" style="background:var(--success);" onclick="copiarContrato()">📋 Copiar Contrato</button>
+            <div>
+                <label style="font-size:0.7rem;font-weight:bold;">🧑‍💼 Locatário</label>
+                <div id="camposLocatario">
+                    <div class="campo-flex"><input type="text" class="campo-locatario" placeholder="Nome" value="Carlos Eduardo Silva"></div>
+                    <div class="campo-flex"><input type="text" class="campo-documento" placeholder="Documento" value="MG-12.345.678"></div>
+                    <div class="campo-flex"><input type="text" class="campo-empresa" placeholder="Empresa" value="Silva & Associados"></div>
+                    <div class="campo-flex"><input type="text" class="campo-email" placeholder="E-mail" value="carlos@email.com"></div>
+                    <div class="campo-flex"><input type="text" class="campo-telefone" placeholder="Telefone" value="(11) 98888-7777"></div>
                 </div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; max-height:300px; overflow-y:auto;">
-                    <div>
-                        <label style="font-size:0.7rem;font-weight:bold;">🏠 Imóvel</label>
-                        <div id="camposImovel">
-                            <div class="campo-flex"><input type="text" class="campo-id" placeholder="ID" value="1783815347654"></div>
-                            <div class="campo-flex"><input type="text" class="campo-titulo" placeholder="Título" value="Apartamento Jardins"></div>
-                            <div class="campo-flex"><input type="text" class="campo-tipo" placeholder="Tipo" value="Apartamento"></div>
-                            <div class="campo-flex"><input type="text" class="campo-quartos" placeholder="Quartos" value="2"></div>
-                            <div class="campo-flex"><input type="text" class="campo-banheiros" placeholder="Banheiros" value="1"></div>
-                            <div class="campo-flex"><input type="text" class="campo-area" placeholder="Área m²" value="68"></div>
-                            <div class="campo-flex"><input type="text" class="campo-endereco" placeholder="Endereço" value="Rua das Flores, 123, SP"></div>
-                            <div class="campo-flex"><input type="text" class="campo-preco" placeholder="Preço" value="3200"></div>
-                            <div class="campo-flex"><input type="text" class="campo-contato" placeholder="Contato" value="(11) 99999-8888"></div>
-                            <div class="campo-flex"><input type="text" class="campo-qrcode" placeholder="QR Code" value="QR-2026-001"></div>
-                            <div class="campo-flex"><input type="text" class="campo-img" placeholder="Imagem" value="foto.jpg"></div>
-                        </div>
-                        <div id="camposImovelExtra"></div>
-                    </div>
-                    <div>
-                        <label style="font-size:0.7rem;font-weight:bold;">🧑‍💼 Locatário</label>
-                        <div id="camposLocatario">
-                            <div class="campo-flex"><input type="text" class="campo-locatario" placeholder="Nome" value="Carlos Eduardo Silva"></div>
-                            <div class="campo-flex"><input type="text" class="campo-documento" placeholder="Documento" value="MG-12.345.678"></div>
-                            <div class="campo-flex"><input type="text" class="campo-empresa" placeholder="Empresa" value="Silva & Associados"></div>
-                            <div class="campo-flex"><input type="text" class="campo-email" placeholder="E-mail" value="carlos@email.com"></div>
-                            <div class="campo-flex"><input type="text" class="campo-telefone" placeholder="Telefone" value="(11) 98888-7777"></div>
-                        </div>
-                        <div id="camposLocatarioExtra"></div>
-                    </div>
-                </div>
-                <div style="margin-top:8px;">
-                    <label style="font-size:0.7rem;font-weight:bold;">📝 Template (variáveis: {{...}})</label>
-                    <textarea id="templateContrato" rows="4" style="width:100%;">LOCATÁRIO: {{locatario}}, portador do documento {{documento}}, firma contrato do imóvel {{titulo}} (ID {{id}}), em {{endereco}}, com {{quartos}} quartos, {{banheiros}} banheiro(s), área {{area}}m², valor R$ {{preco}}.</textarea>
-                </div>
-                <div style="margin-top:6px; background:var(--bg); padding:8px; border-radius:8px; max-height:150px; overflow-y:auto; white-space:pre-wrap; font-size:0.85rem;" id="previewContrato">Pré-visualização...</div>
-                <div style="font-size:0.7rem; color:var(--text); opacity:0.7; margin-top:4px;" id="statusVariaveis">✅ variáveis resolvidas</div>
+                <div id="camposLocatarioExtra"></div>
             </div>
-
-            <div id="tab-clientes" class="tab-pane">
-                <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
-                    <button class="btn-success btn-sm" onclick="adicionarCliente()">➕ Novo Cliente</button>
-                    <button class="btn-s btn-sm" onclick="carregarClienteSelecionado()">📋 Carregar no Contrato</button>
-                    <button class="btn-danger btn-sm" onclick="removerClienteSelecionado()">🗑️ Remover</button>
-                </div>
-                <div class="filtro-cliente">
-                    <input type="text" id="filtroNome" placeholder="🔍 Filtrar por nome..." oninput="renderizarClientes()">
-                    <select id="filtroDocumento" onchange="renderizarClientes()"><option value="">Todos</option></select>
-                </div>
-                <div id="listaClientes" style="max-height:250px; overflow-y:auto;">
-                    <div style="color:#999; text-align:center; padding:20px;">Nenhum cliente cadastrado.</div>
-                </div>
-            </div>
-            <button class="btn-s" onclick="closeM()">Fechar</button>
+        </div>
+        <div style="margin-top:8px;">
+            <label style="font-size:0.7rem;font-weight:bold;">📝 Template (variáveis: {{...}})</label>
+            <textarea id="templateContrato" rows="4" style="width:100%;">LOCATÁRIO: {{locatario}}, portador do documento {{documento}}, firma contrato do imóvel {{titulo}} (ID {{id}}), em {{endereco}}, com {{quartos}} quartos, {{banheiros}} banheiro(s), área {{area}}m², valor R$ {{preco}}.</textarea>
+        </div>
+        <div style="margin-top:6px; background:var(--bg); padding:8px; border-radius:8px; max-height:150px; overflow-y:auto; white-space:pre-wrap; font-size:0.85rem;" id="previewContrato">Pré-visualização...</div>
+        <div style="font-size:0.7rem; color:var(--text); opacity:0.7; margin-top:4px;" id="statusVariaveis">✅ variáveis resolvidas</div>
+        <button class="btn-s" onclick="closeM()">Fechar</button>
     </div></div>
 
     <!-- Modal Supabase -->
     <div id="m-supabase" class="modal"><div class="modal-c">
-            <h3>☁️ Configurar Supabase</h3>
-            <p style="font-size:0.8rem;color:#666;">Use para sincronizar dados na rede Tor e entre dispositivos.</p>
-            <input type="text" id="sb-url" placeholder="URL do Supabase (ex: https://xxx.supabase.co)" value="https://fodekmainscpeyfvwbrb.supabase.co">
-            <input type="text" id="sb-key" placeholder="Chave anon/public (ex: eyJ...)" value="sb_publishable_TNpTLiYWHjOajcjTUCll5w_sUWxlPAD">
-            <input type="text" id="sb-table" placeholder="Nome da tabela (ex: imoveis)" value="imoveis">
-            <button class="btn-p" onclick="salvarConfigSupabase()">💾 Salvar e Conectar</button>
-            <button class="btn-s" onclick="testarSupabase()">🔌 Testar Conexão</button>
-            <button class="btn-danger btn-sm" onclick="desconectarSupabase()">⛔ Desconectar</button>
-            <button class="btn-s" onclick="closeM()">Fechar</button>
+        <h3>☁️ Configurar Supabase</h3>
+        <p style="font-size:0.8rem;color:#666;">Sincroniza dados entre admin e clientes via rede Tor</p>
+        <input type="text" id="sb-url" placeholder="URL do Supabase" value="https://fodekmainscpeyfvwbrb.supabase.co">
+        <input type="text" id="sb-key" placeholder="Chave anon/public" value="sb_publishable_TNpTLiYWHjOajcjTUCll5w_sUWxlPAD">
+        <input type="text" id="sb-table" placeholder="Tabela" value="imoveis">
+        <button class="btn-p" onclick="salvarConfigSupabase()">💾 Conectar</button>
+        <button class="btn-s" onclick="testarSupabase()">🔌 Testar</button>
+        <button class="btn-danger btn-sm" onclick="desconectarSupabase()">⛔ Desconectar</button>
+        <button class="btn-s" onclick="closeM()">Fechar</button>
     </div></div>
 
-    <!-- Modais de conexão P2P -->
+    <!-- Modais P2P -->
     <div id="m-join" class="modal"><div class="modal-c">
-            <h3>Entrar na Sala</h3>
-            <input type="text" id="in-id" placeholder="ID do Lojista">
-            <button class="btn-p" onclick="conectarP2P('client')">Conectar</button>
-            <button class="btn-s" onclick="closeM()">Cancelar</button>
+        <h3>🌐 Entrar na Sala</h3>
+        <p style="font-size:0.8rem;color:#666;">Digite o ID do Host para receber os dados</p>
+        <input type="text" id="in-id" placeholder="ID do Host">
+        <button class="btn-p" onclick="conectarP2P('client')">🔗 Conectar</button>
+        <button class="btn-s" onclick="closeM()">Cancelar</button>
     </div></div>
     <div id="m-host" class="modal"><div class="modal-c">
-            <h3>Criar Sala</h3>
-            <input type="text" id="ho-id" placeholder="Nome da Loja">
-            <button class="btn-p" onclick="conectarP2P('host')">Iniciar</button>
-            <button class="btn-s" onclick="closeM()">Cancelar</button>
+        <h3>📡 Criar Sala (Admin)</h3>
+        <p style="font-size:0.8rem;color:#666;">Crie uma sala para compartilhar os dados com clientes</p>
+        <input type="text" id="ho-id" placeholder="Nome da Loja">
+        <button class="btn-p" onclick="conectarP2P('host')">🚀 Iniciar</button>
+        <button class="btn-s" onclick="closeM()">Cancelar</button>
     </div></div>
 
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js">
-    </script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script>
         // ============================================
         // BANCO DE DADOS LOCAL
@@ -605,6 +473,7 @@
         let templateContrato = localStorage.getItem('templateContrato') ||
             'LOCATÁRIO: {{locatario}}, portador do documento {{documento}}, firma contrato do imóvel {{titulo}} (ID {{id}}), em {{endereco}}, com {{quartos}} quartos, {{banheiros}} banheiro(s), área {{area}}m², valor R$ {{preco}}.';
         let clienteSelecionado = null;
+        let isClienteMode = false;
 
         // ============================================
         // SUPABASE
@@ -625,35 +494,29 @@
             const url = document.getElementById('sb-url').value.trim();
             const key = document.getElementById('sb-key').value.trim();
             const table = document.getElementById('sb-table').value.trim() || 'imoveis';
-            if (!url || !key) {
-                alert('Preencha URL e chave do Supabase.');
-                return;
-            }
+            if (!url || !key) { alert('Preencha URL e chave.'); return; }
             supabaseConfig = { url, key, table };
             localStorage.setItem('supabase_config', JSON.stringify(supabaseConfig));
             testarSupabase();
         }
 
         async function testarSupabase() {
-            if (!supabaseConfig) {
-                alert('Configure o Supabase primeiro.');
-                return;
-            }
+            if (!supabaseConfig) { alert('Configure o Supabase primeiro.'); return; }
             try {
                 const { createClient } = supabase;
                 supabaseClient = createClient(supabaseConfig.url, supabaseConfig.key);
-                const { data, error } = await supabaseClient
+                const { error } = await supabaseClient
                     .from(supabaseConfig.table)
                     .select('count', { count: 'exact', head: true });
 
                 if (error) {
                     document.getElementById('supabaseStatus').className = 'status-supabase offline';
-                    document.getElementById('supabaseStatus').textContent = '☁️ Erro: ' + error.message;
-                    alert('❌ Erro ao conectar: ' + error.message);
+                    document.getElementById('supabaseStatus').textContent = '☁️ Erro';
+                    alert('❌ Erro: ' + error.message);
                 } else {
                     document.getElementById('supabaseStatus').className = 'status-supabase online';
                     document.getElementById('supabaseStatus').textContent = '☁️ Online';
-                    alert('✅ Conectado ao Supabase com sucesso!');
+                    alert('✅ Conectado!');
                     await sincronizarSupabase();
                 }
             } catch (err) {
@@ -669,39 +532,28 @@
             localStorage.removeItem('supabase_config');
             document.getElementById('supabaseStatus').className = 'status-supabase offline';
             document.getElementById('supabaseStatus').textContent = '☁️ Offline';
-            alert('⛔ Desconectado do Supabase.');
+            alert('⛔ Desconectado.');
             closeM();
         }
 
         // ============================================
-        // SINCRONIZAÇÃO SUPABASE (CORRIGIDA)
+        // SINCRONIZAÇÃO SUPABASE
         // ============================================
         async function sincronizarSupabase() {
-            if (!supabaseClient || !supabaseConfig) {
-                console.log('⚠️ Supabase não configurado');
-                return;
-            }
+            if (!supabaseClient || !supabaseConfig) return;
 
             try {
                 document.getElementById('supabaseStatus').className = 'status-supabase sincronizando';
                 document.getElementById('supabaseStatus').textContent = '☁️ Sincronizando...';
 
-                // 1. BUSCAR DADOS DO SUPABASE
+                // Buscar do Supabase
                 const { data: supabaseData, error: fetchError } = await supabaseClient
                     .from(supabaseConfig.table)
-                    .select('*')
-                    .order('created_at', { ascending: false });
+                    .select('*');
 
-                if (fetchError) {
-                    console.error('❌ Erro ao buscar do Supabase:', fetchError);
-                    throw fetchError;
-                }
+                if (fetchError) throw fetchError;
 
-                // 2. MESCLAR COM DADOS LOCAIS
                 if (supabaseData && supabaseData.length > 0) {
-                    console.log(`📥 ${supabaseData.length} registros encontrados no Supabase`);
-                    
-                    // Mapear dados do Supabase para o formato local
                     const supabaseImoveis = supabaseData.map(item => ({
                         id: item.id || item.imovel_id,
                         titulo: item.titulo || 'Sem título',
@@ -713,12 +565,10 @@
                         preco: item.preco || 0,
                         contato: item.contato || '',
                         qrcode: item.qrcode || '',
-                        img: item.img || null,
-                        created_at: item.created_at || new Date().toISOString(),
-                        updated_at: item.updated_at || new Date().toISOString()
+                        img: item.img || null
                     }));
 
-                    // Mesclar com dados locais (supabase tem prioridade)
+                    // Mesclar (Supabase tem prioridade)
                     const merged = [...db];
                     supabaseImoveis.forEach(sbItem => {
                         const localIndex = merged.findIndex(l => l.id === sbItem.id);
@@ -733,12 +583,9 @@
                     localStorage.setItem('imoveis_db', JSON.stringify(db));
                     render();
                     atualizarFiltro();
-                    console.log(`✅ ${db.length} imóveis sincronizados localmente`);
-                } else {
-                    console.log('📭 Nenhum registro no Supabase, enviando dados locais...');
                 }
 
-                // 3. ENVIAR DADOS LOCAIS PARA O SUPABASE (UPSERT)
+                // Enviar dados locais para o Supabase
                 await enviarParaSupabase();
 
                 document.getElementById('supabaseStatus').className = 'status-supabase online';
@@ -749,18 +596,14 @@
                 console.error('❌ Erro na sincronização:', err);
                 document.getElementById('supabaseStatus').className = 'status-supabase offline';
                 document.getElementById('supabaseStatus').textContent = '☁️ Erro';
-                alert('❌ Erro ao sincronizar: ' + err.message);
             }
         }
 
         async function enviarParaSupabase() {
             if (!supabaseClient || !supabaseConfig) return;
-
             try {
-                console.log(`📤 Enviando ${db.length} imóveis para o Supabase...`);
-                
                 for (const item of db) {
-                    const { error } = await supabaseClient
+                    await supabaseClient
                         .from(supabaseConfig.table)
                         .upsert({
                             id: item.id,
@@ -776,28 +619,19 @@
                             img: item.img || null,
                             updated_at: new Date().toISOString()
                         }, { onConflict: 'id' });
-
-                    if (error) {
-                        console.error(`❌ Erro ao salvar ${item.id}:`, error);
-                    }
                 }
-                console.log('✅ Dados enviados para o Supabase com sucesso!');
             } catch (err) {
-                console.error('❌ Erro ao enviar para Supabase:', err);
+                console.error('Erro ao enviar:', err);
             }
         }
 
-        // Forçar sincronização manual
         function forcarSincronizacao() {
-            if (!supabaseClient) {
-                alert('⚠️ Conecte-se ao Supabase primeiro!');
-                return;
-            }
+            if (!supabaseClient) { alert('Conecte-se ao Supabase primeiro!'); return; }
             sincronizarSupabase();
         }
 
         // ============================================
-        // PEERJS (P2P) CORRIGIDO
+        // PEERJS (P2P) - ADMIN HOST E CLIENTE
         // ============================================
         let peer = null;
         let activeConnection = null;
@@ -806,41 +640,37 @@
 
         function conectarP2P(mode) {
             const id = mode === 'host' ? document.getElementById('ho-id').value : document.getElementById('in-id').value;
-            if (!id) {
-                alert('Digite um ID válido');
-                return;
-            }
+            if (!id) { alert('Digite um ID'); return; }
             closeM();
 
-            if (peer) {
-                peer.destroy();
-                peer = null;
-            }
+            if (peer) { peer.destroy();
+                peer = null; }
 
             if (mode === 'host') {
+                // ADMIN - HOST
                 peer = new Peer(id);
                 peerId = id;
                 isHost = true;
+                isClienteMode = false;
+                document.body.classList.remove('cliente-mode');
+                document.getElementById('roleBadge').className = 'role-badge admin';
+                document.getElementById('roleBadge').textContent = '👑 Admin';
 
                 peer.on('open', () => {
                     document.getElementById('status').innerText = `📡 Host: ${id}`;
-                    document.getElementById('peerStatus').className = 'peer-status conectado';
+                    document.getElementById('peerStatus').className = 'peer-status host';
                     document.getElementById('peerStatus').textContent = '📡 Host';
-                    alert(`✅ Sala criada! ID: ${id}\nCompartilhe este ID para outros entrarem.`);
+                    alert(`✅ Sala criada! ID: ${id}\nCompartilhe este ID com os clientes.`);
                 });
 
                 peer.on('connection', (conn) => {
                     activeConnection = conn;
                     document.getElementById('status').innerText = `📡 Cliente conectado!`;
                     console.log('👤 Cliente conectado:', conn.peer);
-                    
+
                     conn.on('data', (data) => {
                         if (data.type === 'req') {
-                            // Enviar dados locais para o cliente
-                            conn.send({
-                                type: 'db',
-                                data: db
-                            });
+                            conn.send({ type: 'db', data: db });
                             console.log('📤 Dados enviados para o cliente');
                         }
                         if (data.type === 'chat') {
@@ -849,35 +679,37 @@
                         }
                     });
 
-                    // Enviar dados imediatamente
                     setTimeout(() => {
                         conn.send({ type: 'db', data: db });
                     }, 500);
                 });
 
                 peer.on('error', (err) => {
-                    console.error('❌ Erro PeerJS:', err);
+                    console.error('❌ Erro:', err);
                     alert('❌ Erro: ' + err.message);
                 });
 
             } else {
-                // Cliente
+                // CLIENTE - entra na sala
                 peer = new Peer();
                 isHost = false;
+                isClienteMode = true;
+                document.body.classList.add('cliente-mode');
+                document.getElementById('roleBadge').className = 'role-badge cliente';
+                document.getElementById('roleBadge').textContent = '👤 Cliente';
 
                 peer.on('open', (myId) => {
                     peerId = myId;
                     document.getElementById('status').innerText = `🔗 Conectando a ${id}...`;
-                    
+
                     activeConnection = peer.connect(id);
-                    
+
                     activeConnection.on('open', () => {
                         document.getElementById('status').innerText = `✅ Conectado a ${id}`;
                         document.getElementById('peerStatus').className = 'peer-status conectado';
                         document.getElementById('peerStatus').textContent = '📡 Cliente';
-                        alert('✅ Conectado ao host!');
-                        document.body.classList.add('view-mode');
-                        
+                        alert('✅ Conectado! Recebendo dados...');
+
                         // Solicitar dados
                         activeConnection.send({ type: 'req' });
                     });
@@ -888,7 +720,9 @@
                             localStorage.setItem('imoveis_db', JSON.stringify(db));
                             render();
                             atualizarFiltro();
-                            console.log('📥 Dados recebidos do host:', db.length, 'imóveis');
+                            console.log('📥 Dados recebidos:', db.length, 'imóveis');
+                            document.getElementById('status').innerText =
+                                `📥 ${db.length} imóveis carregados`;
                         }
                         if (data.type === 'chat') {
                             addMsg(data.data, 'them');
@@ -897,7 +731,7 @@
                     });
 
                     activeConnection.on('error', (err) => {
-                        console.error('❌ Erro de conexão:', err);
+                        console.error('❌ Erro:', err);
                         alert('❌ Erro ao conectar: ' + err.message);
                     });
                 });
@@ -909,7 +743,6 @@
             }
         }
 
-        // Função para enviar atualizações via P2P
         function enviarP2P() {
             if (activeConnection && isHost) {
                 activeConnection.send({ type: 'db', data: db });
@@ -920,25 +753,19 @@
         // ============================================
         // UI GERAL
         // ============================================
-        function openM(id) {
-            document.getElementById(id).style.display = 'flex';
-        }
+        function openM(id) { document.getElementById(id).style.display = 'flex'; }
 
-        function closeM() {
-            document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
-        }
+        function closeM() { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); }
 
         function toggleTheme() {
             const h = document.documentElement;
             h.setAttribute('data-theme', h.getAttribute('data-theme') === 'light' ? 'dark' : 'light');
         }
 
-        function toggleSide() {
-            document.body.classList.toggle('menu-right');
-        }
+        function toggleSide() { document.body.classList.toggle('menu-right'); }
 
         // ============================================
-        // RENDERIZAÇÃO DOS CARDS
+        // RENDERIZAÇÃO
         // ============================================
         function render() {
             const list = document.getElementById('list');
@@ -950,7 +777,8 @@
             );
 
             if (res.length === 0) {
-                list.innerHTML = `<div style="grid-column:1/-1; text-align:center; padding:40px; color:#999;">Nenhum imóvel encontrado. Clique em "Novo Imóvel" para adicionar.</div>`;
+                list.innerHTML =
+                    `<div style="grid-column:1/-1; text-align:center; padding:40px; color:#999;">Nenhum imóvel encontrado.</div>`;
                 return;
             }
 
@@ -959,7 +787,7 @@
                     ${i.img ? `<img src="${i.img}">` : `<div style="height:130px;background:#eee;border-radius:8px; display:flex; align-items:center; justify-content:center; color:#999;">sem foto</div>`}
                     <small style="font-weight:bold; color:var(--primary)">${i.tipo}</small>
                     <strong style="font-size:0.9rem">${i.titulo}</strong>
-                    <span style="font-size:0.8rem; color:var(--text)}">${i.endereco.substring(0,30)}${i.endereco.length>30?'…':''}</span>
+                    <span style="font-size:0.8rem;">${i.endereco.substring(0,30)}${i.endereco.length>30?'…':''}</span>
                     <div style="display:flex; gap:4px; font-size:0.75rem;">
                         <span>🛏️ ${i.quartos}</span>
                         <span>🚽 ${i.banheiros}</span>
@@ -976,9 +804,10 @@
         }
 
         // ============================================
-        // CRUD IMÓVEIS
+        // CRUD (apenas Admin)
         // ============================================
         function openEdit(id = null) {
+            if (isClienteMode) { alert('Apenas o Admin pode editar.'); return; }
             if (id) {
                 const i = db.find(x => x.id == id);
                 document.getElementById('e-id').value = i.id;
@@ -1000,6 +829,7 @@
         }
 
         function save() {
+            if (isClienteMode) { alert('Apenas o Admin pode salvar.'); return; }
             const id = document.getElementById('e-id').value;
             const file = document.getElementById('e-img').files[0];
             const act = (img = null) => {
@@ -1027,7 +857,7 @@
                 atualizarFiltro();
                 enviarP2P();
                 enviarParaSupabase();
-                alert('✅ Imóvel salvo com sucesso!');
+                alert('✅ Imóvel salvo!');
             };
             if (file) {
                 const r = new FileReader();
@@ -1039,7 +869,8 @@
         }
 
         function del(id) {
-            if (confirm("Remover este imóvel?")) {
+            if (isClienteMode) { alert('Apenas o Admin pode remover.'); return; }
+            if (confirm("Remover?")) {
                 db = db.filter(x => x.id != id);
                 localStorage.setItem('imoveis_db', JSON.stringify(db));
                 render();
@@ -1050,7 +881,7 @@
         }
 
         // ============================================
-        // DETALHES COM QR CODE
+        // DETALHES E QR CODE
         // ============================================
         function openDetalhes(id) {
             const i = db.find(x => x.id == id);
@@ -1069,12 +900,12 @@
             if (i.qrcode && i.qrcode.trim() !== '') {
                 gerarQRCode(i.qrcode, container);
             } else {
-                container.innerHTML = '<p style="color: #999;">Nenhum QR Code cadastrado.</p>';
+                container.innerHTML = '<p style="color:#999;">Nenhum QR Code.</p>';
             }
             openM('m-detalhes');
         }
 
-        function gerarQRCode(texto, elementoContainer) {
+        function gerarQRCode(texto, container) {
             try {
                 const qr = qrcode(0, 'M');
                 qr.addData(texto);
@@ -1091,10 +922,9 @@
                         ctx.fillRect(col * moduleSize, row * moduleSize, moduleSize, moduleSize);
                     }
                 }
-                elementoContainer.appendChild(canvas);
+                container.appendChild(canvas);
             } catch (err) {
-                elementoContainer.innerHTML = '<p style="color: red;">Erro ao gerar QR Code.</p>';
-                console.error(err);
+                container.innerHTML = '<p style="color:red;">Erro ao gerar QR Code.</p>';
             }
         }
 
@@ -1102,6 +932,10 @@
             const texto = document.getElementById('d-contato-text').innerText;
             navigator.clipboard.writeText(texto);
             alert("Contato copiado!");
+        }
+
+        function imprimirImovel() {
+            window.print();
         }
 
         // ============================================
@@ -1149,6 +983,7 @@
         // EXPORT/IMPORT
         // ============================================
         function exportData() {
+            if (isClienteMode) { alert('Apenas Admin pode exportar.'); return; }
             const data = { imoveis: db, clientes: clientes, template: templateContrato };
             const a = document.createElement('a');
             a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data));
@@ -1157,6 +992,7 @@
         }
 
         function importData(e) {
+            if (isClienteMode) { alert('Apenas Admin pode importar.'); return; }
             const r = new FileReader();
             r.onload = ev => {
                 try {
@@ -1174,71 +1010,15 @@
                     renderizarPreview();
                     enviarP2P();
                     enviarParaSupabase();
-                    alert('✅ Dados importados com sucesso!');
-                } catch (err) {
-                    alert('❌ Erro ao importar: ' + err.message);
-                }
+                    alert('✅ Dados importados!');
+                } catch (err) { alert('❌ Erro: ' + err.message); }
             };
             r.readAsText(e.target.files[0]);
         }
 
         // ============================================
-        // CONTRATO E CLIENTES
+        // CONTRATO
         // ============================================
-        document.addEventListener('click', function(e) {
-            if (e.target.dataset.tab) {
-                document.querySelectorAll('.tab-nav button').forEach(b => b.classList.remove('active'));
-                e.target.classList.add('active');
-                document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
-                document.getElementById(e.target.dataset.tab).classList.add('active');
-            }
-        });
-
-        function addCampoExtra(tipo) {
-            const nome = prompt('Nome do campo extra:');
-            if (!nome) return;
-            if (tipo === 'imovel') {
-                camposExtrasImovel.push(nome);
-                localStorage.setItem('camposExtrasImovel', JSON.stringify(camposExtrasImovel));
-                renderizarCamposExtras('imovel');
-            } else {
-                camposExtrasLocatario.push(nome);
-                localStorage.setItem('camposExtrasLocatario', JSON.stringify(camposExtrasLocatario));
-                renderizarCamposExtras('locatario');
-            }
-            renderizarPreview();
-        }
-
-        function renderizarCamposExtras(tipo) {
-            const container = tipo === 'imovel' ? document.getElementById('camposImovelExtra') : document.getElementById(
-                'camposLocatarioExtra');
-            const lista = tipo === 'imovel' ? camposExtrasImovel : camposExtrasLocatario;
-            container.innerHTML = '';
-            lista.forEach((nome, idx) => {
-                const div = document.createElement('div');
-                div.className = 'campo-extra';
-                div.innerHTML = `
-                    <label style="font-size:0.7rem;">${nome}:</label>
-                    <input type="text" class="campo-extra-input" data-name="${nome}" placeholder="Valor para ${nome}" style="flex:1;">
-                    <button class="btn-remover-campo" onclick="removerCampoExtra('${tipo}', ${idx})">✕</button>
-                `;
-                container.appendChild(div);
-            });
-        }
-
-        function removerCampoExtra(tipo, idx) {
-            if (tipo === 'imovel') {
-                camposExtrasImovel.splice(idx, 1);
-                localStorage.setItem('camposExtrasImovel', JSON.stringify(camposExtrasImovel));
-                renderizarCamposExtras('imovel');
-            } else {
-                camposExtrasLocatario.splice(idx, 1);
-                localStorage.setItem('camposExtrasLocatario', JSON.stringify(camposExtrasLocatario));
-                renderizarCamposExtras('locatario');
-            }
-            renderizarPreview();
-        }
-
         function obterVariaveis() {
             const vars = {};
             document.querySelectorAll('#camposImovel input, #camposLocatario input').forEach(inp => {
@@ -1276,9 +1056,10 @@
         }
 
         function salvarContrato() {
+            if (isClienteMode) { alert('Apenas Admin pode salvar o template.'); return; }
             const template = document.getElementById('templateContrato').value;
             localStorage.setItem('templateContrato', template);
-            alert('✅ Template do contrato salvo!');
+            alert('✅ Template salvo!');
         }
 
         function imprimirContrato() {
@@ -1299,47 +1080,18 @@
                     <div>Testemunha 1: <span class="linha">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></div>
                     <div>Testemunha 2: <span class="linha">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></div>
                 </div>
-                <p style="margin-top:30px;font-size:0.8rem;color:#666;">Documento gerado em ${new Date().toLocaleDateString()}</p>
+                <p style="margin-top:30px;font-size:0.8rem;color:#666;">Gerado em ${new Date().toLocaleDateString()}</p>
                 </body></html>
             `);
             win.document.close();
             setTimeout(() => win.print(), 500);
         }
 
-        // ============================================
-        // COPIAR CONTRATO E REDIRECIONAR
-        // ============================================
         function copiarContrato() {
             const preview = document.getElementById('previewContrato');
             const texto = preview.textContent;
-            const vars = obterVariaveis();
-
-            const dadosContrato = {
-                texto: texto,
-                imovel: {
-                    id: vars.id || '',
-                    titulo: vars.titulo || '',
-                    tipo: vars.tipo || '',
-                    endereco: vars.endereco || '',
-                    preco: vars.preco || ''
-                },
-                locatario: {
-                    nome: vars.locatario || '',
-                    documento: vars.documento || '',
-                    empresa: vars.empresa || '',
-                    email: vars.email || '',
-                    telefone: vars.telefone || ''
-                },
-                data: new Date().toISOString()
-            };
-
-            localStorage.setItem('contrato_atual', JSON.stringify(dadosContrato));
-
             navigator.clipboard.writeText(texto).then(() => {
-                alert('✅ Contrato copiado para a área de transferência!');
-                const url = window.location.href.split('?')[0] + '?contrato=' + encodeURIComponent(JSON.stringify(
-                    dadosContrato));
-                window.open(url, '_blank');
+                alert('✅ Contrato copiado!');
             }).catch(() => {
                 const textarea = document.createElement('textarea');
                 textarea.value = texto;
@@ -1347,57 +1099,24 @@
                 textarea.select();
                 document.execCommand('copy');
                 document.body.removeChild(textarea);
-                alert('✅ Contrato copiado! Redirecionando...');
-                const url = window.location.href.split('?')[0] + '?contrato=' + encodeURIComponent(JSON.stringify(
-                    dadosContrato));
-                window.open(url, '_blank');
+                alert('✅ Contrato copiado!');
             });
         }
 
-        function verificarContratoURL() {
-            const params = new URLSearchParams(window.location.search);
-            const contratoData = params.get('contrato');
-            if (contratoData) {
-                try {
-                    const dados = JSON.parse(decodeURIComponent(contratoData));
-                    setTimeout(() => {
-                        alert('📄 Contrato carregado!\n\n' + dados.texto);
-                        if (dados.imovel) {
-                            document.querySelector('.campo-id').value = dados.imovel.id || '';
-                            document.querySelector('.campo-titulo').value = dados.imovel.titulo || '';
-                            document.querySelector('.campo-tipo').value = dados.imovel.tipo || '';
-                            document.querySelector('.campo-endereco').value = dados.imovel.endereco || '';
-                            document.querySelector('.campo-preco').value = dados.imovel.preco || '';
-                        }
-                        if (dados.locatario) {
-                            document.querySelector('.campo-locatario').value = dados.locatario.nome || '';
-                            document.querySelector('.campo-documento').value = dados.locatario.documento || '';
-                            document.querySelector('.campo-empresa').value = dados.locatario.empresa || '';
-                            document.querySelector('.campo-email').value = dados.locatario.email || '';
-                            document.querySelector('.campo-telefone').value = dados.locatario.telefone || '';
-                        }
-                        renderizarPreview();
-                        openM('m-contrato');
-                    }, 500);
-                } catch (e) {
-                    console.error('Erro ao carregar contrato da URL:', e);
-                }
-            }
-        }
-
         // ============================================
-        // CLIENTES
+        // CLIENTES (apenas Admin)
         // ============================================
         function adicionarCliente() {
+            if (isClienteMode) { alert('Apenas Admin pode gerenciar clientes.'); return; }
             const nome = prompt('Nome do cliente:');
             if (!nome) return;
-            const documento = prompt('Documento (RG/CPF):') || '';
+            const documento = prompt('Documento:') || '';
             const telefone = prompt('Telefone:') || '';
             const email = prompt('E-mail:') || '';
-            const empresa = prompt('Empresa (opcional):') || '';
+            const empresa = prompt('Empresa:') || '';
             const extras = {};
             while (true) {
-                const key = prompt('Campo extra (deixe vazio para finalizar):');
+                const key = prompt('Campo extra (vazio para finalizar):');
                 if (!key) break;
                 const value = prompt(`Valor para "${key}":`) || '';
                 extras[key] = value;
@@ -1410,15 +1129,16 @@
         }
 
         function renderizarClientes() {
-            const filtro = document.getElementById('filtroNome').value.toLowerCase();
-            const docFiltro = document.getElementById('filtroDocumento').value;
+            const container = document.getElementById('listaClientes');
+            if (!container) return;
+            const filtro = document.getElementById('filtroNome')?.value?.toLowerCase() || '';
+            const docFiltro = document.getElementById('filtroDocumento')?.value || '';
             let filtered = clientes;
             if (filtro) filtered = filtered.filter(c => c.nome.toLowerCase().includes(filtro));
             if (docFiltro) filtered = filtered.filter(c => c.documento === docFiltro);
 
-            const container = document.getElementById('listaClientes');
             if (filtered.length === 0) {
-                container.innerHTML = '<div style="color:#999;text-align:center;padding:20px;">Nenhum cliente encontrado.</div>';
+                container.innerHTML = '<div style="color:#999;text-align:center;padding:20px;">Nenhum cliente.</div>';
                 return;
             }
             let html = '';
@@ -1462,16 +1182,17 @@
                 });
             }
             renderizarPreview();
-            alert('✅ Cliente carregado no contrato!');
+            alert('✅ Cliente carregado!');
         }
 
         function carregarClienteSelecionado() {
-            if (!clienteSelecionado) { alert('Selecione um cliente primeiro.'); return; }
+            if (!clienteSelecionado) { alert('Selecione um cliente.'); return; }
             carregarCliente(clientes.indexOf(clienteSelecionado));
         }
 
         function removerCliente(idx) {
-            if (confirm('Remover este cliente?')) {
+            if (isClienteMode) { alert('Apenas Admin pode remover.'); return; }
+            if (confirm('Remover?')) {
                 clientes.splice(idx, 1);
                 localStorage.setItem('clientes_db', JSON.stringify(clientes));
                 if (clienteSelecionado && !clientes.includes(clienteSelecionado)) clienteSelecionado = null;
@@ -1487,11 +1208,62 @@
         }
 
         function atualizarFiltroDocumentos() {
+            const sel = document.getElementById('filtroDocumento');
+            if (!sel) return;
             const docSet = new Set();
             clientes.forEach(c => { if (c.documento) docSet.add(c.documento); });
-            const sel = document.getElementById('filtroDocumento');
             sel.innerHTML = '<option value="">Todos documentos</option>';
             docSet.forEach(d => { sel.innerHTML += `<option value="${d}">${d}</option>`; });
+        }
+
+        // ============================================
+        // CAMPOS EXTRAS
+        // ============================================
+        function addCampoExtra(tipo) {
+            if (isClienteMode) { alert('Apenas Admin pode adicionar campos.'); return; }
+            const nome = prompt('Nome do campo:');
+            if (!nome) return;
+            if (tipo === 'imovel') {
+                camposExtrasImovel.push(nome);
+                localStorage.setItem('camposExtrasImovel', JSON.stringify(camposExtrasImovel));
+                renderizarCamposExtras('imovel');
+            } else {
+                camposExtrasLocatario.push(nome);
+                localStorage.setItem('camposExtrasLocatario', JSON.stringify(camposExtrasLocatario));
+                renderizarCamposExtras('locatario');
+            }
+            renderizarPreview();
+        }
+
+        function renderizarCamposExtras(tipo) {
+            const container = tipo === 'imovel' ? document.getElementById('camposImovelExtra') : document.getElementById(
+                'camposLocatarioExtra');
+            if (!container) return;
+            const lista = tipo === 'imovel' ? camposExtrasImovel : camposExtrasLocatario;
+            container.innerHTML = '';
+            lista.forEach((nome, idx) => {
+                const div = document.createElement('div');
+                div.className = 'campo-extra';
+                div.innerHTML = `
+                    <label style="font-size:0.7rem;">${nome}:</label>
+                    <input type="text" class="campo-extra-input" data-name="${nome}" placeholder="Valor" style="flex:1;">
+                    <button class="btn-remover-campo" onclick="removerCampoExtra('${tipo}', ${idx})">✕</button>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function removerCampoExtra(tipo, idx) {
+            if (tipo === 'imovel') {
+                camposExtrasImovel.splice(idx, 1);
+                localStorage.setItem('camposExtrasImovel', JSON.stringify(camposExtrasImovel));
+                renderizarCamposExtras('imovel');
+            } else {
+                camposExtrasLocatario.splice(idx, 1);
+                localStorage.setItem('camposExtrasLocatario', JSON.stringify(camposExtrasLocatario));
+                renderizarCamposExtras('locatario');
+            }
+            renderizarPreview();
         }
 
         // ============================================
@@ -1506,7 +1278,6 @@
             renderizarClientes();
             atualizarFiltroDocumentos();
             renderizarPreview();
-            verificarContratoURL();
 
             if (supabaseConfig) {
                 testarSupabase();
@@ -1518,9 +1289,9 @@
                 }
             });
 
-            console.log('🚀 Sistema inicializado!');
-            console.log(`📦 ${db.length} imóveis carregados`);
-            console.log(`👥 ${clientes.length} clientes carregados`);
+            console.log('🚀 Sistema iniciado!');
+            console.log(`📦 ${db.length} imóveis`);
+            console.log(`👥 ${clientes.length} clientes`);
         };
     </script>
 </body>
