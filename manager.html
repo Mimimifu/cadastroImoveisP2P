@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ImóveisGestão | Socket.IO + Salas</title>
+    <title>ImóveisGestão | Supabase + Tor</title>
     <style>
         :root {
             --bg: #f8fafc;
@@ -21,7 +21,6 @@
             --text: #f1f5f9;
             --border: #334155;
         }
-
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html, body { width: 100%; height: 100%; background: var(--bg); color: var(--text); overflow: hidden; transition: 0.3s; }
         body { font-family: sans-serif; display: flex; flex-direction: row; }
@@ -150,7 +149,6 @@
         .qrcode-canvas { display: flex; justify-content: center; margin: 10px 0; }
         .qrcode-canvas canvas { max-width: 100%; height: auto; border: 1px solid var(--border); border-radius: 8px; }
 
-        /* Modo Cliente */
         body.cliente-mode .admin,
         body.cliente-mode .card-admin-btns,
         body.cliente-mode .config-btns,
@@ -244,15 +242,15 @@
             font-weight: bold;
             font-size: 0.8rem;
         }
-        .status-socket {
+        .status-supabase {
             font-size: 0.7rem;
             padding: 4px 10px;
             border-radius: 20px;
             display: inline-block;
         }
-        .status-socket.online { background: var(--success); color: white; }
-        .status-socket.offline { background: var(--danger); color: white; }
-        .status-socket.conectando { background: var(--warning); color: white; }
+        .status-supabase.online { background: var(--success); color: white; }
+        .status-supabase.offline { background: var(--danger); color: white; }
+        .status-supabase.sincronizando { background: var(--warning); color: white; }
         .role-badge {
             font-size: 0.7rem;
             padding: 4px 14px;
@@ -271,10 +269,34 @@
             background: var(--border);
             color: var(--text);
         }
+        .realtime-badge {
+            font-size: 0.6rem;
+            padding: 2px 8px;
+            border-radius: 12px;
+            background: var(--success);
+            color: white;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .loading {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid var(--border);
+            border-top: 2px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
     </style>
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
-    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
 <body>
 
@@ -284,11 +306,9 @@
             <button class="btn-s" style="width: 35px; padding: 5px;" onclick="document.body.classList.toggle('collapsed')">☰</button>
         </div>
 
-        <!-- Botões visíveis para ambos -->
         <button class="btn-s btn-cliente-visible" onclick="openM('m-contrato')">📄 <span class="txt">Ver Contrato</span></button>
         <button class="btn-s" id="btn-enter" onclick="openM('m-join')">🌐 <span class="txt">Entrar na Sala</span></button>
 
-        <!-- Ferramentas de Admin -->
         <div class="admin" id="admin-tools" style="display:flex; flex-direction:column; gap:5px; margin-top:10px;">
             <button class="btn-p" onclick="openEdit()">➕ <span class="txt">Novo Imóvel</span></button>
             <button class="btn-s" onclick="criarSala()">📡 <span class="txt">Criar Sala</span></button>
@@ -314,9 +334,10 @@
             <input type="text" id="srch" placeholder="Buscar imóvel..." style="flex:2" oninput="render()">
             <select id="filt" style="flex:1" onchange="render()"><option>Todos</option></select>
             <button class="btn-s btn-sm btn-cliente-visible" onclick="openM('m-contrato')" style="width:auto;">📄 Contrato</button>
-            <span id="socketStatus" class="status-socket offline">🔌 Offline</span>
+            <span id="supabaseStatus" class="status-supabase offline">☁️ Offline</span>
             <span id="roleBadge" class="role-badge admin">👑 Admin</span>
             <span id="salaBadge" class="sala-info">🏠 Sala: local</span>
+            <span id="realtimeBadge" class="realtime-badge">🔴 Realtime</span>
         </div>
         <div id="status" style="font-size: 0.6rem; color: var(--primary); margin-bottom: 10px; font-weight: bold; text-transform: uppercase;">Modo Local</div>
         <div class="grid" id="list"></div>
@@ -432,12 +453,11 @@
     <!-- Modal Supabase -->
     <div id="m-supabase" class="modal"><div class="modal-c">
         <h3>☁️ Configurar Supabase</h3>
-        <p style="font-size:0.8rem;color:#666;">Sincroniza dados entre admin e clientes via rede Tor</p>
-        <input type="text" id="sb-url" placeholder="URL do Supabase">
-        <input type="text" id="sb-key" placeholder="Chave anon/public">
-        <input type="text" id="sb-table" placeholder="Tabela" value="imoveis">
-        <button class="btn-p" onclick="salvarConfigSupabase()">💾 Conectar</button>
-        <button class="btn-s" onclick="testarSupabase()">🔌 Testar</button>
+        <p style="font-size:0.8rem;color:#666;">Conecte-se ao Supabase para sincronização em tempo real via Tor</p>
+        <input type="text" id="sb-url" placeholder="URL do Supabase (ex: https://xxx.supabase.co)" value="https://fodekmainscpeyfvwbrb.supabase.co">
+        <input type="text" id="sb-key" placeholder="Chave anon/public (ex: eyJ...)" value="sb_publishable_TNpTLiYWHjOajcjTUCll5w_sUWxlPAD">
+        <button class="btn-p" onclick="salvarConfigSupabase()">💾 Salvar e Conectar</button>
+        <button class="btn-s" onclick="testarSupabase()">🔌 Testar Conexão</button>
         <button class="btn-danger btn-sm" onclick="desconectarSupabase()">⛔ Desconectar</button>
         <button class="btn-s" onclick="closeM()">Fechar</button>
     </div></div>
@@ -445,139 +465,36 @@
     <!-- Modal entrar na sala -->
     <div id="m-join" class="modal"><div class="modal-c">
         <h3>🌐 Entrar na Sala</h3>
-        <p style="font-size:0.8rem;color:#666;">Digite o nome da sala para receber os dados</p>
-        <input type="text" id="in-sala" placeholder="Nome da sala (ex: teste2)">
+        <p style="font-size:0.8rem;color:#666;">Digite o ID da sala para receber os dados em tempo real</p>
+        <input type="text" id="in-sala" placeholder="ID da sala (ex: teste2)">
         <button class="btn-p" onclick="entrarSala()">🔗 Entrar</button>
         <button class="btn-s" onclick="closeM()">Cancelar</button>
     </div></div>
 
     <script>
         // ============================================
-        // BANCO DE DADOS LOCAL
-        // ============================================
-        let db = JSON.parse(localStorage.getItem('imoveis_db')) || [];
-        let clientes = JSON.parse(localStorage.getItem('clientes_db')) || [];
-        let camposExtrasImovel = JSON.parse(localStorage.getItem('camposExtrasImovel')) || [];
-        let camposExtrasLocatario = JSON.parse(localStorage.getItem('camposExtrasLocatario')) || [];
-        let templateContrato = localStorage.getItem('templateContrato') ||
-            'LOCATÁRIO: {{locatario}}, portador do documento {{documento}}, firma contrato do imóvel {{titulo}} (ID {{id}}), em {{endereco}}, com {{quartos}} quartos, {{banheiros}} banheiro(s), área {{area}}m², valor R$ {{preco}}.';
-        let clienteSelecionado = null;
-        let isClienteMode = false;
-        let salaAtual = 'local';
-        let socket = null;
-
-        // ============================================
-        // SOCKET.IO
-        // ============================================
-        const SOCKET_URL = window.location.origin;
-
-        function conectarSocket(sala, isAdmin = false) {
-            if (socket) {
-                socket.disconnect();
-                socket = null;
-            }
-
-            socket = io(SOCKET_URL, {
-                query: { sala: sala, role: isAdmin ? 'admin' : 'cliente' }
-            });
-
-            document.getElementById('socketStatus').className = 'status-socket conectando';
-            document.getElementById('socketStatus').textContent = '🔌 Conectando...';
-
-            socket.on('connect', () => {
-                document.getElementById('socketStatus').className = 'status-socket online';
-                document.getElementById('socketStatus').textContent = '🔌 Online';
-                document.getElementById('status').innerText = `✅ Conectado à sala: ${sala}`;
-                console.log(`✅ Conectado à sala: ${sala}`);
-
-                if (isAdmin) {
-                    // Admin envia os dados
-                    socket.emit('sync_db', { sala: sala, data: db });
-                } else {
-                    // Cliente solicita dados
-                    socket.emit('request_db', { sala: sala });
-                }
-            });
-
-            socket.on('db_update', (data) => {
-                console.log(`📥 Dados recebidos da sala ${sala}:`, data.length, 'imóveis');
-                db = data;
-                localStorage.setItem('imoveis_db', JSON.stringify(db));
-                render();
-                atualizarFiltro();
-                document.getElementById('status').innerText = `📥 ${db.length} imóveis carregados da sala`;
-            });
-
-            socket.on('chat_message', (msg) => {
-                addMsg(msg, 'them');
-                document.getElementById('notif').style.display = 'inline';
-            });
-
-            socket.on('connect_error', (err) => {
-                console.error('❌ Erro de conexão:', err);
-                document.getElementById('socketStatus').className = 'status-socket offline';
-                document.getElementById('socketStatus').textContent = '🔌 Offline';
-            });
-
-            socket.on('disconnect', () => {
-                document.getElementById('socketStatus').className = 'status-socket offline';
-                document.getElementById('socketStatus').textContent = '🔌 Offline';
-                document.getElementById('status').innerText = '⚠️ Desconectado';
-            });
-
-            salaAtual = sala;
-            document.getElementById('salaBadge').textContent = `🏠 Sala: ${sala}`;
-        }
-
-        function criarSala() {
-            const sala = prompt('Nome da sala para criar (ex: loja1):');
-            if (!sala) return;
-            isClienteMode = false;
-            document.body.classList.remove('cliente-mode');
-            document.getElementById('roleBadge').className = 'role-badge admin';
-            document.getElementById('roleBadge').textContent = '👑 Admin';
-            conectarSocket(sala, true);
-            // Enviar dados existentes
-            setTimeout(() => {
-                if (socket) {
-                    socket.emit('sync_db', { sala: sala, data: db });
-                    console.log(`📤 Dados enviados para sala ${sala}`);
-                }
-            }, 1000);
-            alert(`✅ Sala "${sala}" criada! Compartilhe o nome com os clientes.`);
-        }
-
-        function entrarSala() {
-            const sala = document.getElementById('in-sala').value.trim();
-            if (!sala) { alert('Digite o nome da sala.'); return; }
-            closeM();
-
-            isClienteMode = true;
-            document.body.classList.add('cliente-mode');
-            document.getElementById('roleBadge').className = 'role-badge cliente';
-            document.getElementById('roleBadge').textContent = '👤 Cliente';
-
-            conectarSocket(sala, false);
-        }
-
-        function enviarDadosSocket() {
-            if (socket && salaAtual !== 'local') {
-                socket.emit('sync_db', { sala: salaAtual, data: db });
-                console.log('📤 Dados enviados via Socket.IO');
-            }
-        }
-
-        // ============================================
-        // SUPABASE
+        // CONFIGURAÇÃO SUPABASE
         // ============================================
         let supabaseClient = null;
         let supabaseConfig = JSON.parse(localStorage.getItem('supabase_config')) || null;
+        let salaAtual = localStorage.getItem('sala_atual') || 'local';
+        let isClienteMode = false;
+        let db = [];
+        let clientes = [];
+        let templateContrato = '';
+        let camposExtrasImovel = [];
+        let camposExtrasLocatario = [];
+        let clienteSelecionado = null;
+        let realtimeSubscription = null;
+        let chatSubscription = null;
 
+        // ============================================
+        // FUNÇÕES SUPABASE
+        // ============================================
         function configurarSupabase() {
             if (supabaseConfig) {
                 document.getElementById('sb-url').value = supabaseConfig.url || '';
                 document.getElementById('sb-key').value = supabaseConfig.key || '';
-                document.getElementById('sb-table').value = supabaseConfig.table || 'imoveis';
             }
             openM('m-supabase');
         }
@@ -585,9 +502,8 @@
         function salvarConfigSupabase() {
             const url = document.getElementById('sb-url').value.trim();
             const key = document.getElementById('sb-key').value.trim();
-            const table = document.getElementById('sb-table').value.trim() || 'imoveis';
-            if (!url || !key) { alert('Preencha URL e chave.'); return; }
-            supabaseConfig = { url, key, table };
+            if (!url || !key) { alert('Preencha URL e chave do Supabase.'); return; }
+            supabaseConfig = { url, key };
             localStorage.setItem('supabase_config', JSON.stringify(supabaseConfig));
             testarSupabase();
         }
@@ -597,163 +513,357 @@
             try {
                 const { createClient } = supabase;
                 supabaseClient = createClient(supabaseConfig.url, supabaseConfig.key);
-                const { error } = await supabaseClient
-                    .from(supabaseConfig.table)
-                    .select('count', { count: 'exact', head: true });
+                
+                // Testar conexão
+                const { data, error } = await supabaseClient
+                    .from('salas')
+                    .select('id')
+                    .limit(1);
 
                 if (error) {
-                    alert('❌ Erro: ' + error.message);
+                    document.getElementById('supabaseStatus').className = 'status-supabase offline';
+                    document.getElementById('supabaseStatus').textContent = '☁️ Erro';
+                    alert('❌ Erro ao conectar: ' + error.message);
                 } else {
-                    alert('✅ Conectado!');
-                    await sincronizarSupabase();
+                    document.getElementById('supabaseStatus').className = 'status-supabase online';
+                    document.getElementById('supabaseStatus').textContent = '☁️ Online';
+                    alert('✅ Conectado ao Supabase com sucesso!');
+                    await carregarDados();
+                    setupRealtime();
                 }
             } catch (err) {
+                document.getElementById('supabaseStatus').className = 'status-supabase offline';
+                document.getElementById('supabaseStatus').textContent = '☁️ Offline';
                 alert('❌ Erro: ' + err.message);
             }
         }
 
         function desconectarSupabase() {
+            if (realtimeSubscription) {
+                realtimeSubscription.unsubscribe();
+                realtimeSubscription = null;
+            }
+            if (chatSubscription) {
+                chatSubscription.unsubscribe();
+                chatSubscription = null;
+            }
             supabaseClient = null;
             supabaseConfig = null;
             localStorage.removeItem('supabase_config');
-            alert('⛔ Desconectado.');
+            document.getElementById('supabaseStatus').className = 'status-supabase offline';
+            document.getElementById('supabaseStatus').textContent = '☁️ Offline';
+            alert('⛔ Desconectado do Supabase.');
             closeM();
         }
 
-        async function sincronizarSupabase() {
-            if (!supabaseClient || !supabaseConfig) return;
+        // ============================================
+        // CARREGAR DADOS DO SUPABASE
+        // ============================================
+        async function carregarDados() {
+            if (!supabaseClient || salaAtual === 'local') return;
+
             try {
-                const { data: supabaseData, error: fetchError } = await supabaseClient
-                    .from(supabaseConfig.table)
-                    .select('*');
+                document.getElementById('supabaseStatus').className = 'status-supabase sincronizando';
+                document.getElementById('supabaseStatus').textContent = '☁️ Carregando...';
 
-                if (fetchError) throw fetchError;
+                // 1. Carregar imóveis da sala
+                const { data: imoveis, error: errImoveis } = await supabaseClient
+                    .from('imoveis')
+                    .select('*')
+                    .eq('sala_id', salaAtual);
 
-                if (supabaseData && supabaseData.length > 0) {
-                    const supabaseImoveis = supabaseData.map(item => ({
-                        id: item.id || item.imovel_id,
-                        titulo: item.titulo || 'Sem título',
-                        tipo: item.tipo || 'Casa',
-                        quartos: item.quartos || 0,
-                        banheiros: item.banheiros || 0,
-                        area: item.area || 0,
-                        endereco: item.endereco || '',
-                        preco: item.preco || 0,
-                        contato: item.contato || '',
-                        qrcode: item.qrcode || '',
-                        img: item.img || null
-                    }));
+                if (errImoveis) throw errImoveis;
+                db = imoveis || [];
+                localStorage.setItem('imoveis_db', JSON.stringify(db));
 
-                    const merged = [...db];
-                    supabaseImoveis.forEach(sbItem => {
-                        const localIndex = merged.findIndex(l => l.id === sbItem.id);
-                        if (localIndex >= 0) {
-                            merged[localIndex] = { ...merged[localIndex], ...sbItem };
-                        } else {
-                            merged.push(sbItem);
-                        }
+                // 2. Carregar clientes da sala
+                const { data: clientesData, error: errClientes } = await supabaseClient
+                    .from('clientes')
+                    .select('*')
+                    .eq('sala_id', salaAtual);
+
+                if (errClientes) throw errClientes;
+                clientes = clientesData || [];
+                localStorage.setItem('clientes_db', JSON.stringify(clientes));
+
+                // 3. Carregar template do contrato
+                const { data: template, error: errTemplate } = await supabaseClient
+                    .from('contratos_template')
+                    .select('*')
+                    .eq('sala_id', salaAtual)
+                    .maybeSingle();
+
+                if (errTemplate) throw errTemplate;
+                if (template) {
+                    templateContrato = template.template || '';
+                    camposExtrasImovel = template.campos_extras_imovel || [];
+                    camposExtrasLocatario = template.campos_extras_locatario || [];
+                    localStorage.setItem('templateContrato', templateContrato);
+                    localStorage.setItem('camposExtrasImovel', JSON.stringify(camposExtrasImovel));
+                    localStorage.setItem('camposExtrasLocatario', JSON.stringify(camposExtrasLocatario));
+                }
+
+                // 4. Carregar mensagens do chat
+                const { data: mensagens, error: errMsgs } = await supabaseClient
+                    .from('mensagens')
+                    .select('*')
+                    .eq('sala_id', salaAtual)
+                    .order('created_at', { ascending: true })
+                    .limit(50);
+
+                if (errMsgs) throw errMsgs;
+                if (mensagens) {
+                    document.getElementById('msgs').innerHTML = '';
+                    mensagens.forEach(msg => {
+                        addMsg(msg.texto, msg.remetente === 'admin' ? 'me' : 'them');
                     });
-
-                    db = merged;
-                    localStorage.setItem('imoveis_db', JSON.stringify(db));
-                    render();
-                    atualizarFiltro();
                 }
 
-                await enviarParaSupabase();
-                console.log('✅ Sincronização com Supabase concluída!');
+                document.getElementById('supabaseStatus').className = 'status-supabase online';
+                document.getElementById('supabaseStatus').textContent = '☁️ Online';
+                
+                render();
+                atualizarFiltro();
+                renderizarClientes();
+                renderizarCamposExtras('imovel');
+                renderizarCamposExtras('locatario');
+                renderizarPreview();
+                document.getElementById('status').innerText = `✅ ${db.length} imóveis carregados da sala "${salaAtual}"`;
 
             } catch (err) {
-                console.error('❌ Erro na sincronização:', err);
+                console.error('❌ Erro ao carregar dados:', err);
+                document.getElementById('supabaseStatus').className = 'status-supabase offline';
+                document.getElementById('supabaseStatus').textContent = '☁️ Erro';
+                alert('❌ Erro ao carregar dados: ' + err.message);
             }
         }
 
-        async function enviarParaSupabase() {
-            if (!supabaseClient || !supabaseConfig) return;
+        // ============================================
+        // REALTIME SUBSCRIPTIONS (TOR-FRIENDLY)
+        // ============================================
+        function setupRealtime() {
+            if (!supabaseClient || salaAtual === 'local') return;
+
+            // Remover inscrições antigas
+            if (realtimeSubscription) {
+                realtimeSubscription.unsubscribe();
+                realtimeSubscription = null;
+            }
+            if (chatSubscription) {
+                chatSubscription.unsubscribe();
+                chatSubscription = null;
+            }
+
+            // 1. Realtime para imóveis
+            realtimeSubscription = supabaseClient
+                .channel(`imoveis-${salaAtual}`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'imoveis',
+                        filter: `sala_id=eq.${salaAtual}`
+                    },
+                    (payload) => {
+                        console.log('🔄 Mudança em imóveis:', payload);
+                        carregarDados();
+                    }
+                )
+                .subscribe((status) => {
+                    console.log('📡 Realtime imóveis status:', status);
+                    document.getElementById('realtimeBadge').textContent = 
+                        status === 'SUBSCRIBED' ? '🟢 Realtime' : '🔴 Realtime';
+                });
+
+            // 2. Realtime para clientes
+            supabaseClient
+                .channel(`clientes-${salaAtual}`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'clientes',
+                        filter: `sala_id=eq.${salaAtual}`
+                    },
+                    () => {
+                        console.log('🔄 Mudança em clientes');
+                        carregarDados();
+                    }
+                )
+                .subscribe();
+
+            // 3. Realtime para chat
+            chatSubscription = supabaseClient
+                .channel(`mensagens-${salaAtual}`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: 'INSERT',
+                        schema: 'public',
+                        table: 'mensagens',
+                        filter: `sala_id=eq.${salaAtual}`
+                    },
+                    (payload) => {
+                        const msg = payload.new;
+                        addMsg(msg.texto, msg.remetente === 'admin' ? 'me' : 'them');
+                        document.getElementById('notif').style.display = 'inline';
+                    }
+                )
+                .subscribe();
+
+            // 4. Realtime para template
+            supabaseClient
+                .channel(`template-${salaAtual}`)
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'contratos_template',
+                        filter: `sala_id=eq.${salaAtual}`
+                    },
+                    () => {
+                        console.log('🔄 Mudança no template');
+                        carregarDados();
+                    }
+                )
+                .subscribe();
+
+            document.getElementById('realtimeBadge').textContent = '🟢 Realtime';
+        }
+
+        // ============================================
+        // SALVAR DADOS NO SUPABASE
+        // ============================================
+        async function salvarNoSupabase(tabela, dados) {
+            if (!supabaseClient || salaAtual === 'local') return;
+
             try {
-                for (const item of db) {
-                    await supabaseClient
-                        .from(supabaseConfig.table)
-                        .upsert({
-                            id: item.id,
-                            titulo: item.titulo,
-                            tipo: item.tipo,
-                            quartos: Number(item.quartos) || 0,
-                            banheiros: Number(item.banheiros) || 0,
-                            area: Number(item.area) || 0,
-                            endereco: item.endereco || '',
-                            preco: Number(item.preco) || 0,
-                            contato: item.contato || '',
-                            qrcode: item.qrcode || '',
-                            img: item.img || null,
-                            updated_at: new Date().toISOString()
-                        }, { onConflict: 'id' });
-                }
+                const { error } = await supabaseClient
+                    .from(tabela)
+                    .upsert(dados, { onConflict: 'id' });
+
+                if (error) throw error;
+                console.log(`✅ Dados salvos em ${tabela}`);
             } catch (err) {
-                console.error('Erro ao enviar:', err);
+                console.error(`❌ Erro ao salvar em ${tabela}:`, err);
+                alert('❌ Erro ao salvar no Supabase: ' + err.message);
             }
         }
 
-        function forcarSincronizacao() {
-            if (!supabaseClient) { alert('Conecte-se ao Supabase primeiro!'); return; }
-            sincronizarSupabase();
-        }
-
         // ============================================
-        // UI GERAL
+        // SALAS
         // ============================================
-        function openM(id) { document.getElementById(id).style.display = 'flex'; }
-
-        function closeM() { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); }
-
-        function toggleTheme() {
-            const h = document.documentElement;
-            h.setAttribute('data-theme', h.getAttribute('data-theme') === 'light' ? 'dark' : 'light');
-        }
-
-        function toggleSide() { document.body.classList.toggle('menu-right'); }
-
-        // ============================================
-        // RENDERIZAÇÃO
-        // ============================================
-        function render() {
-            const list = document.getElementById('list');
-            const q = document.getElementById('srch').value.toLowerCase();
-            const f = document.getElementById('filt').value;
-            const res = db.filter(i =>
-                (i.titulo.toLowerCase().includes(q) || i.endereco.toLowerCase().includes(q)) &&
-                (f === 'Todos' || i.tipo === f)
-            );
-
-            if (res.length === 0) {
-                list.innerHTML =
-                    `<div style="grid-column:1/-1; text-align:center; padding:40px; color:#999;">Nenhum imóvel encontrado.</div>`;
+        async function criarSala() {
+            if (!supabaseClient) {
+                alert('⚠️ Conecte-se ao Supabase primeiro!\nClique em "Supabase" no menu.');
                 return;
             }
 
-            list.innerHTML = res.map(i => `
-                <div class="card">
-                    ${i.img ? `<img src="${i.img}">` : `<div style="height:130px;background:#eee;border-radius:8px; display:flex; align-items:center; justify-content:center; color:#999;">sem foto</div>`}
-                    <small style="font-weight:bold; color:var(--primary)">${i.tipo}</small>
-                    <strong style="font-size:0.9rem">${i.titulo}</strong>
-                    <span style="font-size:0.8rem;">${i.endereco.substring(0,30)}${i.endereco.length>30?'…':''}</span>
-                    <div style="display:flex; gap:4px; font-size:0.75rem;">
-                        <span>🛏️ ${i.quartos}</span>
-                        <span>🚽 ${i.banheiros}</span>
-                        <span>📐 ${i.area}m²</span>
-                    </div>
-                    <span style="color:var(--primary); font-weight:bold">R$ ${Number(i.preco).toFixed(2)}</span>
-                    <button class="btn-p" style="padding:6px; font-size:0.8rem" onclick="openDetalhes('${i.id}')">🔍 Detalhes</button>
-                    <div class="card-admin-btns" style="display:flex; gap:4px; margin-top:5px">
-                        <button class="btn-s" style="padding:4px" onclick="openEdit('${i.id}')">✏️</button>
-                        <button class="btn-s" style="padding:4px; color:var(--danger)" onclick="del('${i.id}')">🗑️</button>
-                    </div>
-                </div>
-            `).join('');
+            const nome = prompt('Nome da sala para criar (ex: loja1):');
+            if (!nome) return;
+
+            try {
+                // Verificar se sala já existe
+                const { data: existing, error: checkErr } = await supabaseClient
+                    .from('salas')
+                    .select('id')
+                    .eq('id', nome)
+                    .maybeSingle();
+
+                if (checkErr) throw checkErr;
+
+                if (existing) {
+                    alert(`⚠️ A sala "${nome}" já existe. Entre nela como cliente.`);
+                    return;
+                }
+
+                // Criar sala
+                const { error: createErr } = await supabaseClient
+                    .from('salas')
+                    .insert({ id: nome, nome: nome, criador: 'admin' });
+
+                if (createErr) throw createErr;
+
+                // Criar template padrão
+                const { error: templateErr } = await supabaseClient
+                    .from('contratos_template')
+                    .insert({
+                        sala_id: nome,
+                        template: 'LOCATÁRIO: {{locatario}}, portador do documento {{documento}}, firma contrato do imóvel {{titulo}} (ID {{id}}), em {{endereco}}, com {{quartos}} quartos, {{banheiros}} banheiro(s), área {{area}}m², valor R$ {{preco}}.'
+                    });
+
+                if (templateErr) throw templateErr;
+
+                isClienteMode = false;
+                document.body.classList.remove('cliente-mode');
+                document.getElementById('roleBadge').className = 'role-badge admin';
+                document.getElementById('roleBadge').textContent = '👑 Admin';
+
+                salaAtual = nome;
+                localStorage.setItem('sala_atual', salaAtual);
+                document.getElementById('salaBadge').textContent = `🏠 Sala: ${nome}`;
+
+                await carregarDados();
+                setupRealtime();
+                alert(`✅ Sala "${nome}" criada com sucesso! Compartilhe o ID com os clientes.`);
+                document.getElementById('status').innerText = `✅ Sala "${nome}" criada e ativa`;
+
+            } catch (err) {
+                console.error('❌ Erro ao criar sala:', err);
+                alert('❌ Erro ao criar sala: ' + err.message);
+            }
+        }
+
+        async function entrarSala() {
+            if (!supabaseClient) {
+                alert('⚠️ Conecte-se ao Supabase primeiro!\nClique em "Supabase" no menu.');
+                return;
+            }
+
+            const sala = document.getElementById('in-sala').value.trim();
+            if (!sala) { alert('Digite o ID da sala.'); return; }
+            closeM();
+
+            try {
+                // Verificar se sala existe
+                const { data, error } = await supabaseClient
+                    .from('salas')
+                    .select('id')
+                    .eq('id', sala)
+                    .maybeSingle();
+
+                if (error) throw error;
+
+                if (!data) {
+                    alert(`❌ Sala "${sala}" não encontrada. Verifique o ID.`);
+                    return;
+                }
+
+                isClienteMode = true;
+                document.body.classList.add('cliente-mode');
+                document.getElementById('roleBadge').className = 'role-badge cliente';
+                document.getElementById('roleBadge').textContent = '👤 Cliente';
+
+                salaAtual = sala;
+                localStorage.setItem('sala_atual', salaAtual);
+                document.getElementById('salaBadge').textContent = `🏠 Sala: ${sala}`;
+
+                await carregarDados();
+                setupRealtime();
+                document.getElementById('status').innerText = `✅ Entrou na sala "${sala}" (${db.length} imóveis)`;
+                alert(`✅ Entrou na sala "${sala}" com sucesso!`);
+
+            } catch (err) {
+                console.error('❌ Erro ao entrar na sala:', err);
+                alert('❌ Erro ao entrar na sala: ' + err.message);
+            }
         }
 
         // ============================================
-        // CRUD
+        // CRUD IMÓVEIS (com Supabase)
         // ============================================
         function openEdit(id = null) {
             if (isClienteMode) { alert('Apenas o Admin pode editar.'); return; }
@@ -781,9 +891,10 @@
             if (isClienteMode) { alert('Apenas o Admin pode salvar.'); return; }
             const id = document.getElementById('e-id').value;
             const file = document.getElementById('e-img').files[0];
-            const act = (img = null) => {
+            const act = async (img = null) => {
                 const imovel = {
                     id: id || Date.now().toString(),
+                    sala_id: salaAtual,
                     titulo: document.getElementById('e-titulo').value,
                     tipo: document.getElementById('e-tipo').value,
                     quartos: document.getElementById('e-quartos').value || 0,
@@ -795,19 +906,17 @@
                     qrcode: document.getElementById('e-qrcode').value,
                     img: img || (id ? db.find(x => x.id == id).img : null)
                 };
-                if (id) {
-                    db = db.map(x => x.id == id ? imovel : x);
-                } else {
-                    db.push(imovel);
+
+                try {
+                    await salvarNoSupabase('imoveis', [imovel]);
+                    closeM();
+                    await carregarDados();
+                    alert('✅ Imóvel salvo com sucesso!');
+                } catch (err) {
+                    alert('❌ Erro ao salvar: ' + err.message);
                 }
-                localStorage.setItem('imoveis_db', JSON.stringify(db));
-                closeM();
-                render();
-                atualizarFiltro();
-                enviarDadosSocket();
-                enviarParaSupabase();
-                alert('✅ Imóvel salvo!');
             };
+
             if (file) {
                 const r = new FileReader();
                 r.onload = e => act(e.target.result);
@@ -817,20 +926,113 @@
             }
         }
 
-        function del(id) {
+        async function del(id) {
             if (isClienteMode) { alert('Apenas o Admin pode remover.'); return; }
-            if (confirm("Remover?")) {
-                db = db.filter(x => x.id != id);
-                localStorage.setItem('imoveis_db', JSON.stringify(db));
-                render();
-                atualizarFiltro();
-                enviarDadosSocket();
-                enviarParaSupabase();
+            if (!confirm("Remover este imóvel?")) return;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('imoveis')
+                    .delete()
+                    .eq('id', id);
+
+                if (error) throw error;
+                await carregarDados();
+                alert('✅ Imóvel removido!');
+            } catch (err) {
+                alert('❌ Erro ao remover: ' + err.message);
             }
         }
 
         // ============================================
-        // DETALHES
+        // CHAT (com Supabase)
+        // ============================================
+        async function sendChat() {
+            const input = document.getElementById('chat-i');
+            if (!input.value || !supabaseClient || salaAtual === 'local') return;
+
+            try {
+                const { error } = await supabaseClient
+                    .from('mensagens')
+                    .insert({
+                        sala_id: salaAtual,
+                        texto: input.value,
+                        remetente: isClienteMode ? 'cliente' : 'admin'
+                    });
+
+                if (error) throw error;
+                input.value = '';
+            } catch (err) {
+                console.error('❌ Erro ao enviar mensagem:', err);
+            }
+        }
+
+        function toggleChat() {
+            const w = document.getElementById('chat-win');
+            w.style.display = w.style.display === 'flex' ? 'none' : 'flex';
+            document.getElementById('notif').style.display = 'none';
+        }
+
+        function addMsg(t, s) {
+            const d = document.createElement('div');
+            d.innerText = t;
+            d.style.padding = '8px';
+            d.style.borderRadius = '8px';
+            d.style.maxWidth = '80%';
+            d.style.alignSelf = s === 'me' ? 'flex-end' : 'flex-start';
+            d.style.background = s === 'me' ? 'var(--primary)' : 'var(--border)';
+            d.style.color = s === 'me' ? 'white' : 'var(--text)';
+            document.getElementById('msgs').appendChild(d);
+            const m = document.getElementById('msgs');
+            m.scrollTop = m.scrollHeight;
+        }
+
+        // ============================================
+        // RENDERIZAÇÃO
+        // ============================================
+        function render() {
+            const list = document.getElementById('list');
+            const q = document.getElementById('srch').value.toLowerCase();
+            const f = document.getElementById('filt').value;
+            const res = db.filter(i =>
+                (i.titulo.toLowerCase().includes(q) || i.endereco.toLowerCase().includes(q)) &&
+                (f === 'Todos' || i.tipo === f)
+            );
+
+            if (res.length === 0) {
+                list.innerHTML =
+                    `<div style="grid-column:1/-1; text-align:center; padding:40px; color:#999;">Nenhum imóvel encontrado.</div>`;
+                return;
+            }
+
+            list.innerHTML = res.map(i => `
+                    <div class="card">
+                        ${i.img ? `<img src="${i.img}">` : `<div style="height:130px;background:#eee;border-radius:8px; display:flex; align-items:center; justify-content:center; color:#999;">sem foto</div>`}
+                        <small style="font-weight:bold; color:var(--primary)">${i.tipo}</small>
+                        <strong style="font-size:0.9rem">${i.titulo}</strong>
+                        <span style="font-size:0.8rem;">${i.endereco.substring(0,30)}${i.endereco.length>30?'…':''}</span>
+                        <div style="display:flex; gap:4px; font-size:0.75rem;">
+                            <span>🛏️ ${i.quartos}</span>
+                            <span>🚽 ${i.banheiros}</span>
+                            <span>📐 ${i.area}m²</span>
+                        </div>
+                        <span style="color:var(--primary); font-weight:bold">R$ ${Number(i.preco).toFixed(2)}</span>
+                        <button class="btn-p" style="padding:6px; font-size:0.8rem" onclick="openDetalhes('${i.id}')">🔍 Detalhes</button>
+                        <div class="card-admin-btns" style="display:flex; gap:4px; margin-top:5px">
+                            <button class="btn-s" style="padding:4px" onclick="openEdit('${i.id}')">✏️</button>
+                            <button class="btn-s" style="padding:4px; color:var(--danger)" onclick="del('${i.id}')">🗑️</button>
+                        </div>
+                    </div>
+                `).join('');
+        }
+
+        function atualizarFiltro() {
+            const tipos = ['Todos', ...new Set(db.map(i => i.tipo))];
+            document.getElementById('filt').innerHTML = tipos.map(t => `<option value="${t}">${t}</option>`).join('');
+        }
+
+        // ============================================
+        // DETALHES E QR CODE
         // ============================================
         function openDetalhes(id) {
             const i = db.find(x => x.id == id);
@@ -884,82 +1086,6 @@
         }
 
         // ============================================
-        // FILTRO
-        // ============================================
-        function atualizarFiltro() {
-            const tipos = ['Todos', ...new Set(db.map(i => i.tipo))];
-            document.getElementById('filt').innerHTML = tipos.map(t => `<option value="${t}">${t}</option>`).join('');
-        }
-
-        // ============================================
-        // CHAT
-        // ============================================
-        function toggleChat() {
-            const w = document.getElementById('chat-win');
-            w.style.display = w.style.display === 'flex' ? 'none' : 'flex';
-            document.getElementById('notif').style.display = 'none';
-        }
-
-        function sendChat() {
-            const i = document.getElementById('chat-i');
-            if (!i.value || !socket) return;
-            socket.emit('chat_message', { sala: salaAtual, msg: i.value });
-            addMsg(i.value, 'me');
-            i.value = '';
-        }
-
-        function addMsg(t, s) {
-            const d = document.createElement('div');
-            d.innerText = t;
-            d.style.padding = '8px';
-            d.style.borderRadius = '8px';
-            d.style.maxWidth = '80%';
-            d.style.alignSelf = s === 'me' ? 'flex-end' : 'flex-start';
-            d.style.background = s === 'me' ? 'var(--primary)' : 'var(--border)';
-            d.style.color = s === 'me' ? 'white' : 'var(--text)';
-            document.getElementById('msgs').appendChild(d);
-            const m = document.getElementById('msgs');
-            m.scrollTop = m.scrollHeight;
-        }
-
-        // ============================================
-        // EXPORT/IMPORT
-        // ============================================
-        function exportData() {
-            if (isClienteMode) { alert('Apenas Admin pode exportar.'); return; }
-            const data = { imoveis: db, clientes: clientes, template: templateContrato };
-            const a = document.createElement('a');
-            a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data));
-            a.download = "imoveis_completo.json";
-            a.click();
-        }
-
-        function importData(e) {
-            if (isClienteMode) { alert('Apenas Admin pode importar.'); return; }
-            const r = new FileReader();
-            r.onload = ev => {
-                try {
-                    const data = JSON.parse(ev.target.result);
-                    if (data.imoveis) db = data.imoveis;
-                    if (data.clientes) clientes = data.clientes;
-                    if (data.template) templateContrato = data.template;
-                    localStorage.setItem('imoveis_db', JSON.stringify(db));
-                    localStorage.setItem('clientes_db', JSON.stringify(clientes));
-                    localStorage.setItem('templateContrato', templateContrato);
-                    render();
-                    atualizarFiltro();
-                    renderizarClientes();
-                    atualizarFiltroDocumentos();
-                    renderizarPreview();
-                    enviarDadosSocket();
-                    enviarParaSupabase();
-                    alert('✅ Dados importados!');
-                } catch (err) { alert('❌ Erro: ' + err.message); }
-            };
-            r.readAsText(e.target.files[0]);
-        }
-
-        // ============================================
         // CONTRATO
         // ============================================
         function obterVariaveis() {
@@ -998,34 +1124,45 @@
             }
         }
 
-        function salvarContrato() {
+        async function salvarContrato() {
             if (isClienteMode) { alert('Apenas Admin pode salvar o template.'); return; }
+            if (!supabaseClient) { alert('Conecte-se ao Supabase.'); return; }
+
             const template = document.getElementById('templateContrato').value;
-            localStorage.setItem('templateContrato', template);
-            alert('✅ Template salvo!');
+            try {
+                await salvarNoSupabase('contratos_template', [{
+                    sala_id: salaAtual,
+                    template: template,
+                    campos_extras_imovel: camposExtrasImovel,
+                    campos_extras_locatario: camposExtrasLocatario
+                }]);
+                alert('✅ Template salvo no Supabase!');
+            } catch (err) {
+                alert('❌ Erro ao salvar template: ' + err.message);
+            }
         }
 
         function imprimirContrato() {
             const preview = document.getElementById('previewContrato');
             const win = window.open('', '_blank');
             win.document.write(`
-                <html><head><title>Contrato</title>
-                <style>body{font-family:sans-serif;padding:40px;max-width:800px;margin:auto;line-height:1.8;}
-                .assinatura{margin-top:40px;border-top:1px solid #ccc;padding-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:20px;}
-                .linha{border-bottom:1px solid #000;min-width:150px;display:inline-block;margin-left:10px;}
-                @media print{body{padding:20px;}}</style>
-                </head><body>
-                <h2>Contrato de Locação</h2>
-                <pre style="white-space:pre-wrap;font-family:inherit;font-size:1rem;">${preview.textContent}</pre>
-                <div class="assinatura">
-                    <div>Assinatura locatário: <span class="linha">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></div>
-                    <div>Assinatura locador: <span class="linha">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></div>
-                    <div>Testemunha 1: <span class="linha">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></div>
-                    <div>Testemunha 2: <span class="linha">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></div>
-                </div>
-                <p style="margin-top:30px;font-size:0.8rem;color:#666;">Gerado em ${new Date().toLocaleDateString()}</p>
-                </body></html>
-            `);
+                    <html><head><title>Contrato</title>
+                    <style>body{font-family:sans-serif;padding:40px;max-width:800px;margin:auto;line-height:1.8;}
+                    .assinatura{margin-top:40px;border-top:1px solid #ccc;padding-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+                    .linha{border-bottom:1px solid #000;min-width:150px;display:inline-block;margin-left:10px;}
+                    @media print{body{padding:20px;}}</style>
+                    </head><body>
+                    <h2>Contrato de Locação</h2>
+                    <pre style="white-space:pre-wrap;font-family:inherit;font-size:1rem;">${preview.textContent}</pre>
+                    <div class="assinatura">
+                        <div>Assinatura locatário: <span class="linha">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></div>
+                        <div>Assinatura locador: <span class="linha">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></div>
+                        <div>Testemunha 1: <span class="linha">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></div>
+                        <div>Testemunha 2: <span class="linha">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></div>
+                    </div>
+                    <p style="margin-top:30px;font-size:0.8rem;color:#666;">Gerado em ${new Date().toLocaleDateString()}</p>
+                    </body></html>
+                `);
             win.document.close();
             setTimeout(() => win.print(), 500);
         }
@@ -1047,10 +1184,12 @@
         }
 
         // ============================================
-        // CLIENTES
+        // CLIENTES (com Supabase)
         // ============================================
-        function adicionarCliente() {
+        async function adicionarCliente() {
             if (isClienteMode) { alert('Apenas Admin pode gerenciar clientes.'); return; }
+            if (!supabaseClient) { alert('Conecte-se ao Supabase.'); return; }
+
             const nome = prompt('Nome do cliente:');
             if (!nome) return;
             const documento = prompt('Documento:') || '';
@@ -1064,11 +1203,25 @@
                 const value = prompt(`Valor para "${key}":`) || '';
                 extras[key] = value;
             }
-            clientes.push({ nome, documento, telefone, email, empresa, extras, id: Date.now().toString() });
-            localStorage.setItem('clientes_db', JSON.stringify(clientes));
-            renderizarClientes();
-            atualizarFiltroDocumentos();
-            alert('✅ Cliente adicionado!');
+
+            const cliente = {
+                id: Date.now().toString(),
+                sala_id: salaAtual,
+                nome,
+                documento,
+                telefone,
+                email,
+                empresa,
+                extras
+            };
+
+            try {
+                await salvarNoSupabase('clientes', [cliente]);
+                await carregarDados();
+                alert('✅ Cliente adicionado!');
+            } catch (err) {
+                alert('❌ Erro ao adicionar cliente: ' + err.message);
+            }
         }
 
         function renderizarClientes() {
@@ -1088,19 +1241,19 @@
             filtered.forEach((c, idx) => {
                 const selected = clienteSelecionado && clienteSelecionado.id === c.id ? 'selecionado' : '';
                 html += `
-                    <div class="cliente-item ${selected}" onclick="selecionarCliente(${idx})">
-                        <div class="info">
-                            <strong>${c.nome}</strong>
-                            <span>📄 ${c.documento}</span>
-                            <span>📞 ${c.telefone || '—'}</span>
-                            <span>✉️ ${c.email || '—'}</span>
+                        <div class="cliente-item ${selected}" onclick="selecionarCliente(${idx})">
+                            <div class="info">
+                                <strong>${c.nome}</strong>
+                                <span>📄 ${c.documento}</span>
+                                <span>📞 ${c.telefone || '—'}</span>
+                                <span>✉️ ${c.email || '—'}</span>
+                            </div>
+                            <div>
+                                <button class="btn-s btn-sm" onclick="event.stopPropagation();carregarCliente(${idx})">📋 Carregar</button>
+                                <button class="btn-danger btn-sm" onclick="event.stopPropagation();removerCliente(${idx})">✕</button>
+                            </div>
                         </div>
-                        <div>
-                            <button class="btn-s btn-sm" onclick="event.stopPropagation();carregarCliente(${idx})">📋 Carregar</button>
-                            <button class="btn-danger btn-sm" onclick="event.stopPropagation();removerCliente(${idx})">✕</button>
-                        </div>
-                    </div>
-                `;
+                    `;
             });
             container.innerHTML = html;
         }
@@ -1128,26 +1281,23 @@
             alert('✅ Cliente carregado!');
         }
 
-        function carregarClienteSelecionado() {
-            if (!clienteSelecionado) { alert('Selecione um cliente.'); return; }
-            carregarCliente(clientes.indexOf(clienteSelecionado));
-        }
-
-        function removerCliente(idx) {
+        async function removerCliente(idx) {
             if (isClienteMode) { alert('Apenas Admin pode remover.'); return; }
-            if (confirm('Remover?')) {
-                clientes.splice(idx, 1);
-                localStorage.setItem('clientes_db', JSON.stringify(clientes));
-                if (clienteSelecionado && !clientes.includes(clienteSelecionado)) clienteSelecionado = null;
-                renderizarClientes();
-                atualizarFiltroDocumentos();
-            }
-        }
+            if (!confirm('Remover este cliente?')) return;
 
-        function removerClienteSelecionado() {
-            if (!clienteSelecionado) { alert('Selecione um cliente.'); return; }
-            const idx = clientes.indexOf(clienteSelecionado);
-            if (idx > -1) removerCliente(idx);
+            const cliente = clientes[idx];
+            try {
+                const { error } = await supabaseClient
+                    .from('clientes')
+                    .delete()
+                    .eq('id', cliente.id);
+
+                if (error) throw error;
+                await carregarDados();
+                alert('✅ Cliente removido!');
+            } catch (err) {
+                alert('❌ Erro ao remover cliente: ' + err.message);
+            }
         }
 
         function atualizarFiltroDocumentos() {
@@ -1188,10 +1338,10 @@
                 const div = document.createElement('div');
                 div.className = 'campo-extra';
                 div.innerHTML = `
-                    <label style="font-size:0.7rem;">${nome}:</label>
-                    <input type="text" class="campo-extra-input" data-name="${nome}" placeholder="Valor" style="flex:1;">
-                    <button class="btn-remover-campo" onclick="removerCampoExtra('${tipo}', ${idx})">✕</button>
-                `;
+                        <label style="font-size:0.7rem;">${nome}:</label>
+                        <input type="text" class="campo-extra-input" data-name="${nome}" placeholder="Valor" style="flex:1;">
+                        <button class="btn-remover-campo" onclick="removerCampoExtra('${tipo}', ${idx})">✕</button>
+                    `;
                 container.appendChild(div);
             });
         }
@@ -1210,9 +1360,102 @@
         }
 
         // ============================================
-        // INICIALIZAÇÃO - Suporte a URL com sala
+        // EXPORT/IMPORT
+        // ============================================
+        function exportData() {
+            if (isClienteMode) { alert('Apenas Admin pode exportar.'); return; }
+            const data = { imoveis: db, clientes: clientes, template: templateContrato };
+            const a = document.createElement('a');
+            a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data));
+            a.download = "imoveis_completo.json";
+            a.click();
+        }
+
+        function importData(e) {
+            if (isClienteMode) { alert('Apenas Admin pode importar.'); return; }
+            const r = new FileReader();
+            r.onload = async ev => {
+                try {
+                    const data = JSON.parse(ev.target.result);
+                    if (!supabaseClient) { alert('Conecte-se ao Supabase primeiro.'); return; }
+
+                    // Importar imóveis
+                    if (data.imoveis && data.imoveis.length > 0) {
+                        const imoveisComSala = data.imoveis.map(i => ({
+                            ...i,
+                            sala_id: salaAtual
+                        }));
+                        await salvarNoSupabase('imoveis', imoveisComSala);
+                    }
+
+                    // Importar clientes
+                    if (data.clientes && data.clientes.length > 0) {
+                        const clientesComSala = data.clientes.map(c => ({
+                            ...c,
+                            sala_id: salaAtual
+                        }));
+                        await salvarNoSupabase('clientes', clientesComSala);
+                    }
+
+                    // Importar template
+                    if (data.template) {
+                        await salvarNoSupabase('contratos_template', [{
+                            sala_id: salaAtual,
+                            template: data.template,
+                            campos_extras_imovel: camposExtrasImovel,
+                            campos_extras_locatario: camposExtrasLocatario
+                        }]);
+                    }
+
+                    await carregarDados();
+                    alert('✅ Dados importados com sucesso!');
+                } catch (err) { alert('❌ Erro ao importar: ' + err.message); }
+            };
+            r.readAsText(e.target.files[0]);
+        }
+
+        // ============================================
+        // UI GERAL
+        // ============================================
+        function openM(id) { document.getElementById(id).style.display = 'flex'; }
+
+        function closeM() { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); }
+
+        function toggleTheme() {
+            const h = document.documentElement;
+            h.setAttribute('data-theme', h.getAttribute('data-theme') === 'light' ? 'dark' : 'light');
+        }
+
+        function toggleSide() { document.body.classList.toggle('menu-right'); }
+
+        function forcarSincronizacao() {
+            if (supabaseClient && salaAtual !== 'local') {
+                carregarDados();
+                alert('🔄 Dados recarregados do Supabase!');
+            } else {
+                alert('⚠️ Conecte-se ao Supabase e entre em uma sala.');
+            }
+        }
+
+        // ============================================
+        // INICIALIZAÇÃO
         // ============================================
         window.onload = () => {
+            // Carregar dados locais
+            db = JSON.parse(localStorage.getItem('imoveis_db')) || [];
+            clientes = JSON.parse(localStorage.getItem('clientes_db')) || [];
+            templateContrato = localStorage.getItem('templateContrato') ||
+                'LOCATÁRIO: {{locatario}}, portador do documento {{documento}}, firma contrato do imóvel {{titulo}} (ID {{id}}), em {{endereco}}, com {{quartos}} quartos, {{banheiros}} banheiro(s), área {{area}}m², valor R$ {{preco}}.';
+            camposExtrasImovel = JSON.parse(localStorage.getItem('camposExtrasImovel')) || [];
+            camposExtrasLocatario = JSON.parse(localStorage.getItem('camposExtrasLocatario')) || [];
+
+            // Recuperar sala atual
+            const salaSalva = localStorage.getItem('sala_atual');
+            if (salaSalva && salaSalva !== 'local') {
+                salaAtual = salaSalva;
+                document.getElementById('salaBadge').textContent = `🏠 Sala: ${salaAtual}`;
+            }
+
             atualizarFiltro();
             render();
             document.getElementById('templateContrato').value = templateContrato;
@@ -1222,24 +1465,21 @@
             atualizarFiltroDocumentos();
             renderizarPreview();
 
-            // Verificar se há sala na URL
-            const params = new URLSearchParams(window.location.search);
-            const salaURL = params.get('sala');
-            if (salaURL) {
-                // Entrar automaticamente na sala como cliente
-                setTimeout(() => {
-                    document.getElementById('in-sala').value = salaURL;
-                    isClienteMode = true;
-                    document.body.classList.add('cliente-mode');
-                    document.getElementById('roleBadge').className = 'role-badge cliente';
-                    document.getElementById('roleBadge').textContent = '👤 Cliente';
-                    conectarSocket(salaURL, false);
-                    document.getElementById('status').innerText = `🔗 Entrando na sala: ${salaURL}...`;
-                }, 500);
-            }
-
+            // Verificar se há configuração do Supabase
             if (supabaseConfig) {
                 testarSupabase();
+            } else {
+                document.getElementById('status').innerHTML = '⚠️ Configure o Supabase no menu ☁️ Supabase';
+            }
+
+            // Verificar sala na URL
+            const params = new URLSearchParams(window.location.search);
+            const salaURL = params.get('sala');
+            if (salaURL && supabaseConfig) {
+                setTimeout(() => {
+                    document.getElementById('in-sala').value = salaURL;
+                    entrarSala();
+                }, 1500);
             }
 
             document.addEventListener('input', (e) => {
@@ -1248,10 +1488,11 @@
                 }
             });
 
-            console.log('🚀 Sistema Socket.IO iniciado!');
+            console.log('🚀 Sistema Supabase + Tor iniciado!');
+            console.log(`🏠 Sala atual: ${salaAtual}`);
             console.log(`📦 ${db.length} imóveis`);
             console.log(`👥 ${clientes.length} clientes`);
-            if (salaURL) console.log(`🏠 Sala automática: ${salaURL}`);
+            console.log(`☁️ Supabase: ${supabaseConfig ? 'Configurado' : 'Não configurado'}`);
         };
     </script>
 </body>
